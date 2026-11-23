@@ -24,9 +24,16 @@
 
 **大圣AI 付款二维码：**
 
-![微信收款码](/images/vip/wechat-qr.png)
-
-![支付宝收款码](/images/vip/alipay-qr.jpg)
+<div class="qr-row">
+  <figure>
+    <img src="/images/vip/wechat-qr.png" alt="微信支付收款码" width="760" height="1035" loading="lazy" decoding="async" />
+    <figcaption>微信支付</figcaption>
+  </figure>
+  <figure>
+    <img src="/images/vip/alipay-qr.jpg" alt="支付宝收款码" width="760" height="1141" loading="lazy" decoding="async" />
+    <figcaption>支付宝</figcaption>
+  </figure>
+</div>
 
 ### 四、退款与售后说明（重要）
 

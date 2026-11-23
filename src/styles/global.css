@@ -775,6 +775,35 @@
     max-inline-size: none;
   }
 
+  /* 招生简章的两个收款码：并排、缩小，扫的时候够大但不满屏 */
+  .qr-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem 2.5rem;
+    margin-block: 1.5rem;
+  }
+
+  .qr-row figure {
+    margin: 0;
+    display: grid;
+    gap: 0.5rem;
+    justify-items: center;
+  }
+
+  .qr-row img {
+    inline-size: clamp(9rem, 23vw, 14rem);
+    block-size: auto;
+    border-radius: 0.5rem;
+    box-shadow: 0 6px 18px -10px rgb(0 0 0 / 0.35);
+  }
+
+  .qr-row figcaption {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
   .prose > * + * {
     margin-block-start: 1.1em;
   }
