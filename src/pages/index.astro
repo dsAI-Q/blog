@@ -11,7 +11,7 @@ const posts = sortByDateDesc(await getCollection('posts', ({ data }) => !data.dr
 const latest = posts.slice(0, 8);
 ---
 
-<Base>
+<Base wide>
   <figure class="banner">
     <img
       src={SITE.banner.src}

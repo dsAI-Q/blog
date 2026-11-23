@@ -173,7 +173,8 @@
   }
 
   .wrap-wide {
-    inline-size: min(100% - 2 * var(--space), 108rem);
+    /* 首页三栏要铺开，别被 72rem 卡出大片空白 */
+    inline-size: min(100% - 2 * var(--space), 110rem);
   }
 }
 
@@ -227,6 +228,9 @@
 
   /* 首页顶部横幅：图片里已经有大字，所以只放图，不再往上叠标题 */
   .banner {
+    /* 横幅自己限宽居中，不再决定整页宽度 */
+    max-inline-size: 98rem;
+    margin-inline: auto;
     margin-block-start: var(--space);
     border-radius: var(--radius);
     overflow: hidden;
@@ -378,7 +382,8 @@
 
   @media (min-width: 62rem) {
     .home-grid {
-      grid-template-columns: 15rem minmax(0, 1fr) 15rem;
+      /* 两侧栏有上限，中间文章区吸收剩余宽度 */
+      grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr) minmax(14rem, 17rem);
       grid-template-areas: 'left main right';
     }
   }
