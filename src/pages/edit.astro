@@ -122,9 +122,9 @@ import { SITE } from '../consts';
     <details class="ed-settings">
       <summary>发布设置（GitHub）</summary>
       <p class="muted">
-        填一次就存在本机浏览器里。Token 只在本页 JS 里用，直接调 GitHub API；需要一个有
-        <code>contents: write</code> 权限的细粒度 Token。不想碰 Token 就用「保存到仓库」+ 手动
-        <code>git push</code>。
+        仓库信息已经默认填好（<code>dsAI-Q / blog / main</code>），平时只需要贴 Token。Token 存在本机浏览器、
+        只在本页 JS 里用：细粒度 Token 需要 <code>contents: write</code>，classic Token 需要 <code>repo</code>。
+        贴完直接发布即可，不必先点保存；到期后换一枚新的。
       </p>
       <div class="ed-meta">
         <label><span>仓库 owner</span><input id="g-owner" type="text" autocomplete="off" /></label>
@@ -866,15 +866,35 @@ import { SITE } from '../consts';
 
   function readConfig(): PublishConfig {
     const raw = localStorage.getItem(CONFIG_KEY);
-    return raw ? (JSON.parse(raw) as PublishConfig) : { owner: '', repo: '', branch: 'main', token: '' };
+    const saved = raw ? (JSON.parse(raw) as Partial<PublishConfig>) : {};
+    // 仓库信息给默认值：平时只用填 token
+    return {
+      owner: saved.owner || 'dsAI-Q',
+      repo: saved.repo || 'blog',
+      branch: saved.branch || 'main',
+      token: saved.token || '',
+    };
   }
 
   function fillConfig() {
     const cfg = readConfig();
     $<HTMLInputElement>('#g-owner').value = cfg.owner;
     $<HTMLInputElement>('#g-repo').value = cfg.repo;
-    $<HTMLInputElement>('#g-branch').value = cfg.branch || 'main';
+    $<HTMLInputElement>('#g-branch').value = cfg.branch;
     $<HTMLInputElement>('#g-token').value = cfg.token;
+  }
+
+  /** 表单里填的值优先于 localStorage：贴完 token 直接发布也能用，不必先点保存 */
+  function currentConfig(): PublishConfig {
+    const base = readConfig();
+    const field = (selector: string) =>
+      document.querySelector<HTMLInputElement>(selector)?.value.trim() ?? '';
+    return {
+      owner: field('#g-owner') || base.owner,
+      repo: field('#g-repo') || base.repo,
+      branch: field('#g-branch') || base.branch,
+      token: field('#g-token') || base.token,
+    };
   }
 
   function saveConfig() {
@@ -912,13 +932,7 @@ import { SITE } from '../consts';
 
   /** 仓库默认指向这个站自己的仓库，没填设置也能列文章 */
   function ghConfig(): PublishConfig {
-    const saved = readConfig();
-    return {
-      owner: saved.owner || 'dsAI-Q',
-      repo: saved.repo || 'blog',
-      branch: saved.branch || 'main',
-      token: saved.token,
-    };
+    return currentConfig();
   }
 
   function ghApi(cfg: PublishConfig, tail: string) {
@@ -1053,7 +1067,8 @@ import { SITE } from '../consts';
     }
   }
 
-  async function checkConnection() {    const cfg = readConfig();
+  async function checkConnection() {
+    const cfg = currentConfig();
     if (!cfg.owner || !cfg.repo || !cfg.token) {
       setStatus('先填 owner / repo / token。', 'warn');
       return;
@@ -1076,7 +1091,7 @@ import { SITE } from '../consts';
   }
 
   async function publishToGithub() {
-    const cfg = readConfig();
+    const cfg = currentConfig();
     if (!cfg.owner || !cfg.repo || !cfg.token) {
       setStatus('先在下面「发布设置」里填 owner / repo / token。', 'warn');
       return;
@@ -1124,7 +1139,7 @@ import { SITE } from '../consts';
   }
 
   function needToken(): boolean {
-    if (readConfig().token) return true;
+    if (currentConfig().token) return true;
     panelMsg('调整顺序和删除需要 GitHub token：展开页面底部「发布设置」填一次即可。', 'warn');
     return false;
   }
