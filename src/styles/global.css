@@ -754,8 +754,25 @@
 
   /* 正文排版 */
   .prose {
-    max-inline-size: var(--measure);
+    /* ch 是「0」的宽度，中文一个字约半个 ch：60ch 只有 480px，太窄。
+       这里按 em 给行宽，52em ≈ 830px，长文页再套 .page-column 收口。 */
+    max-inline-size: min(100%, 52em);
+    margin-inline: auto;
     padding-block-end: 3rem;
+  }
+
+  /* 文章页/单页：hered 区和正文共用一条居中栏，别贴着左边留白 */
+  .page-column {
+    inline-size: min(100%, 58em);
+    margin-inline: auto;
+  }
+
+  .page-column .prose {
+    max-inline-size: none;
+  }
+
+  .page-column .post-nav {
+    max-inline-size: none;
   }
 
   .prose > * + * {
@@ -826,6 +843,15 @@
     border-block-end: 1px solid var(--line);
     padding: 0.5rem 0.6rem;
     text-align: start;
+    vertical-align: top;
+  }
+
+  /* 套餐表前两列（类型、价格）别被挤成两行 */
+  .prose td:first-child,
+  .prose th:first-child,
+  .prose td:nth-child(2),
+  .prose th:nth-child(2) {
+    white-space: nowrap;
   }
 
   .prose hr {

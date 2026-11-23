@@ -14,10 +14,12 @@ const contacts = [
 ---
 
 <Base
+  wide
   title="Ai一对一陪练"
   description="ComfyUI 一对一实战教学：零基础部署、工作流搭建、问题当场解决。入门级 500 元，终身陪练 2000 元。"
 >
-  <section class="welcome">
+  <div class="page-column">
+    <section class="welcome">
     <h1>
       Ai一对一陪练
       <span class="tag">招生中</span>
@@ -43,7 +45,7 @@ const contacts = [
     </ul>
   </section>
 
-  <article class="prose prose-wide">
+  <article class="prose">
     <Content />
   </article>
 
@@ -56,6 +58,7 @@ const contacts = [
     </ol>
     <p class="muted">缴费前请读完上面的退款与法律条款，缴费即视为同意。</p>
   </section>
+  </div>
 </Base>
 
 <style>
@@ -85,23 +88,8 @@ const contacts = [
     user-select: all;
   }
 
-  .prose-wide {
-    max-inline-size: 72ch;
-    padding-block-end: 1rem;
-  }
-
-  .prose-wide :global(h3) {
-    margin-block-start: 2.2em;
-  }
-
-  .prose-wide :global(table) {
-    display: block;
-    overflow-x: auto;
-  }
-
   .enroll {
     margin-block: 2rem 4rem;
-    max-inline-size: 72ch;
   }
 
   .enroll h2 {

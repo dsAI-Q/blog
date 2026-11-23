@@ -15,7 +15,8 @@ const { post, prev, next } = Astro.props;
 const { Content } = await render(post);
 ---
 
-<Base title={post.data.title} description={post.data.description} article>
+<Base wide title={post.data.title} description={post.data.description} article>
+  <div class="page-column">
   <article>
     <header class="post-header">
       <h1>{post.data.title}</h1>
@@ -48,4 +49,5 @@ const { Content } = await render(post);
       <div>{next ? <a href={`/posts/${next.id}/`}>{next.data.title} →</a> : <span class="muted">已经是最新一篇</span>}</div>
     </nav>
   </article>
+  </div>
 </Base>
