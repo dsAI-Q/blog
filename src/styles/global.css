@@ -64,6 +64,9 @@
     --btn-bg-dark: oklch(84% 0.13 85);
     --btn-ink-light: oklch(99% 0 0);
     --btn-ink-dark: oklch(20% 0.02 260);
+    /* 横幅上的蓝字：暗底用亮蓝，浅底用深蓝 */
+    --blue-light: oklch(45% 0.16 255);
+    --blue-dark: oklch(80% 0.13 245);
 
     /* 主题令牌：默认取浅色，下面按需覆盖 */
     --ink-1: var(--ink-1-light);
@@ -75,6 +78,7 @@
     --code-bg: var(--code-bg-light);
     --btn-bg: var(--btn-bg-light);
     --btn-ink: var(--btn-ink-light);
+    --blue: var(--blue-light);
 
     --measure: 60ch;
     --radius: 0.6rem;
@@ -93,6 +97,7 @@
       --code-bg: var(--code-bg-dark);
       --btn-bg: var(--btn-bg-dark);
       --btn-ink: var(--btn-ink-dark);
+      --blue: var(--blue-dark);
     }
   }
 
@@ -108,6 +113,7 @@
       --code-bg: light-dark(var(--code-bg-light), var(--code-bg-dark));
       --btn-bg: light-dark(var(--btn-bg-light), var(--btn-bg-dark));
       --btn-ink: light-dark(var(--btn-ink-light), var(--btn-ink-dark));
+      --blue: light-dark(var(--blue-light), var(--blue-dark));
     }
   }
 
@@ -226,11 +232,9 @@
     box-shadow: 0 0 0 1px var(--line);
   }
 
-  /* 首页顶部横幅：图片里已经有大字，所以只放图，不再往上叠标题 */
+  /* 首页顶部横幅：图片里已经有大字，所以只放图 + 右下角说明 */
   .banner {
-    /* 横幅自己限宽居中，不再决定整页宽度 */
-    max-inline-size: 98rem;
-    margin-inline: auto;
+    position: relative;
     margin-block-start: var(--space);
     border-radius: var(--radius);
     overflow: hidden;
@@ -240,6 +244,80 @@
   .banner img {
     inline-size: 100%;
     block-size: auto;
+    /* 换超高比例的图时不要撑满首屏，超出裁上下（人物和标题在中间） */
+    max-block-size: clamp(12rem, 30vw, 30rem);
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .banner-caption {
+    position: absolute;
+    inset-inline-end: clamp(0.75rem, 2.2vw, 2rem);
+    inset-block-end: clamp(0.75rem, 2.2vw, 2rem);
+    display: grid;
+    gap: 0.5rem;
+    justify-items: end;
+    max-inline-size: min(34rem, 58%);
+    text-align: end;
+    color: var(--blue-dark);
+    font-weight: 700;
+    text-shadow:
+      0 1px 8px rgb(0 0 0 / 0.85),
+      0 0 2px rgb(0 0 0 / 0.9);
+  }
+
+  .banner-note {
+    margin: 0;
+    font-size: clamp(0.78rem, 0.72rem + 0.28vw, 0.95rem);
+    line-height: 1.5;
+  }
+
+  .banner-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: flex-end;
+  }
+
+  .banner-links a {
+    color: inherit;
+    font-size: clamp(0.78rem, 0.74rem + 0.2vw, 0.9rem);
+    font-weight: 700;
+    text-decoration: none;
+    padding: 0.32rem 0.8rem;
+    border-radius: 999px;
+    background-color: rgb(0 0 0 / 0.42);
+    border: 1px solid oklch(80% 0.13 245 / 0.55);
+    backdrop-filter: blur(3px);
+  }
+
+  .banner-links a:hover {
+    background-color: rgb(0 0 0 / 0.62);
+    border-color: var(--blue-dark);
+  }
+
+  /* 手机上不压在图上，改成横幅下方的说明条 */
+  @media (max-width: 47.99rem) {
+    .banner-caption {
+      position: static;
+      max-inline-size: none;
+      justify-items: start;
+      text-align: start;
+      padding: 0.75rem 0.9rem 0.85rem;
+      color: var(--blue);
+      text-shadow: none;
+      background-color: var(--surface);
+      border-block-start: 1px solid var(--line);
+    }
+
+    .banner-links {
+      justify-content: flex-start;
+    }
+
+    .banner-links a {
+      background-color: transparent;
+      border-color: var(--line);
+    }
   }
 
   /* 首页欢迎区 */
@@ -330,47 +408,7 @@
     font-size: 0.95rem;
   }
 
-  /* 首页：横幅 → 窄条 → 左中右三栏 */
-  .home-strip {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.4rem 1.25rem;
-    inline-size: min(100%, 52rem);
-    margin-inline: auto;
-    margin-block-start: var(--space);
-    padding: 0.55rem 0.9rem;
-    border: 1px solid var(--line);
-    border-radius: 0.5rem;
-    background-color: var(--surface);
-    font-size: 0.875rem;
-    color: var(--ink-2);
-  }
-
-  .strip-text {
-    margin: 0;
-    max-inline-size: 34rem;
-  }
-
-  .strip-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1rem;
-  }
-
-  .strip-links a {
-    color: var(--ink-1);
-    text-decoration: none;
-    border-block-end: 1px solid var(--line);
-    padding-block-end: 1px;
-  }
-
-  .strip-links a:hover {
-    color: var(--brand);
-    border-color: var(--brand);
-  }
-
+  /* 首页：横幅 → 左中右三栏 */
   .home-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);

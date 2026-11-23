@@ -12,9 +12,9 @@ export const SITE = {
   /** 首页顶部横幅 */
   banner: {
     src: '/images/banner.webp',
-    width: 1568,
-    height: 670,
-    alt: '大圣Ai自习室：大圣看 Ai，今日环球 Ai 新动态',
+    width: 2944,
+    height: 1024,
+    alt: '大圣Ai自习室：专注 Ai 知识、工具、资料分享',
   },
   /** 页头导航 */
   nav: [

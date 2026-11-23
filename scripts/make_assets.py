@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PIL import Image
 
-SRC_BANNER = Path(r"C:\Users\ASUS\.dsh\attachments\v1\objects\87\8726f63be987ac16c0083fe82565e7526fe326e407c2942ebad76d4716e5c130")
+SRC_BANNER = Path(r"C:\Users\ASUS\.dsh\attachments\v1\objects\14\14f13e5764ed4d199458761a6a2f7138f9e69ab7381439e4c029d453b63eee63")
 SRC_AVATAR = Path(r"C:\Users\ASUS\.dsh\attachments\v1\objects\9a\9ad01d9a07a8048597d7d7a8260fc1ea2c925a77146094bdf8c6ed959037a337")
 OUT = Path(r"C:\Users\ASUS\.dsh\bot\workspace\blog\public\images")
 OUT.mkdir(parents=True, exist_ok=True)
