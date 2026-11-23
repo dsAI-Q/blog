@@ -173,6 +173,16 @@ function parseMeta(html, name) {
 }
 
 function parseDate(html) {
+  // 公众号页面里发布时间是 JS 渲染的，但源码里留了这几个可靠字段
+  const ct = /var\s+ct\s*=\s*"(\d{10})"/i.exec(html)?.[1];
+  if (ct) {
+    const shifted = new Date((Number(ct) + 8 * 3600) * 1000);
+    return shifted.toISOString().slice(0, 10);
+  }
+
+  const createTime = /create_time:\s*'(\d{4}-\d{2}-\d{2})/i.exec(html)?.[1];
+  if (createTime) return createTime;
+
   const raw =
     /id="publish_time"[^>]*>([^<]*)</i.exec(html)?.[1] ??
     parseMeta(html, 'article:published_time');
@@ -180,6 +190,16 @@ function parseDate(html) {
   if (!match) return new Date().toISOString().slice(0, 10);
   const [, y, m, d] = match;
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+/** 没指定 --tags 时按标题猜个主题标签，别让几十篇全堆在一个「公众号」里 */
+function inferTags(title) {
+  const tags = ['公众号'];
+  if (/H3|MiniMax|Hunyuan|Wan\s?2|Seedance/i.test(title)) tags.push('H3');
+  if (/image|生图|图像|MOSS|海报|人像|画质/i.test(title)) tags.push('图像模型');
+  if (/工作流|ComfyUI|节点|Skill/i.test(title)) tags.push('ComfyUI');
+  if (/视频|运镜|动作|二创|镜头|延长|监控/i.test(title)) tags.push('视频生成');
+  return [...new Set(tags)];
 }
 
 function slugFor(url, date, title) {
@@ -248,7 +268,7 @@ function stripBoilerplate(text) {
 
 /* ---------------- 主流程 ---------------- */
 
-async function importOne(url, { tags, dry }) {
+async function importOne(url, { tags: explicitTags, dry }) {
   console.log(`\n▸ ${url}`);
   const { status, html } = await fetchPage(url);
   if (status !== 200) throw new Error(`页面 ${status}`);
@@ -260,6 +280,8 @@ async function importOne(url, { tags, dry }) {
 
   const contentHtml = extractBalancedDiv(html, 'id="js_content"');
   if (!contentHtml) throw new Error('正文区域解析失败');
+
+  const tags = explicitTags ?? inferTags(title);
 
   const { markdown, images } = htmlToMarkdown(contentHtml);
   const date = parseDate(html);
@@ -351,19 +373,19 @@ async function main() {
   }
 
   const tagsIndex = argv.indexOf('--tags');
-  const tags =
+  const explicitTags =
     tagsIndex >= 0 && argv[tagsIndex + 1]
       ? argv[tagsIndex + 1]
           .split(/[,，]/)
           .map((tag) => tag.trim())
           .filter(Boolean)
-      : ['公众号', 'AI'];
+      : null;
   const dry = argv.includes('--dry');
 
   const results = [];
   for (const url of urls) {
     try {
-      results.push(await importOne(url, { tags, dry }));
+      results.push(await importOne(url, { tags: explicitTags, dry }));
     } catch (error) {
       console.log(`  失败：${error.message}`);
     }
