@@ -1,9 +1,9 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
-import { formatDate, groupByYear, isoDate, sortByDateDesc } from '../utils';
+import { formatDate, groupByYear, isoDate, sortPosts } from '../utils';
 
-const posts = sortByDateDesc(await getCollection('posts', ({ data }) => !data.draft));
+const posts = sortPosts(await getCollection('posts', ({ data }) => !data.draft));
 const years = groupByYear(posts);
 ---
 

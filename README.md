@@ -54,8 +54,12 @@ description: 一两句摘要，会出现在首页列表和搜索结果里
 date: 2026-11-23
 tags: [标签1, 标签2]
 draft: false   # true 时只在本地可见，不构建上线
+pinned: false  # true 时排在列表最前，带「置顶」标记
+order: 0       # 排序权重，越大越靠前；同权重按日期倒序
 ---
 ```
+
+列表顺序规则：**置顶 → 权重（大在前）→ 日期（新在前）**。只想换两篇文章的前后，给想靠前的那篇把 `order` 设成 `1` 即可，不用改日期。
 
 文件名就是 URL：`src/content/posts/resources-guide.md` → `/posts/resources-guide/`。**上线后不要改名**，改了就是死链。
 

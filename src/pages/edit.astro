@@ -60,6 +60,14 @@ import { SITE } from '../consts';
         <span>摘要（列表页和搜索结果用）</span>
         <input id="f-desc" type="text" autocomplete="off" placeholder="一两句话，说清这篇讲什么" />
       </label>
+      <label>
+        <span>排序权重（越大越靠前，默认 0）</span>
+        <input id="f-order" type="number" step="1" value="0" />
+      </label>
+      <label class="ed-check">
+        <input id="f-pinned" type="checkbox" />
+        <span>置顶到列表最前</span>
+      </label>
       <label class="ed-check">
         <input id="f-draft" type="checkbox" />
         <span>存为草稿，不发布</span>
@@ -321,6 +329,8 @@ import { SITE } from '../consts';
   const tagsEl = $<HTMLInputElement>('#f-tags');
   const slugEl = $<HTMLInputElement>('#f-slug');
   const draftEl = $<HTMLInputElement>('#f-draft');
+  const pinnedEl = $<HTMLInputElement>('#f-pinned');
+  const orderEl = $<HTMLInputElement>('#f-order');
   const imageInput = $<HTMLInputElement>('#file-image');
 
   /* ---------- 状态栏 ---------- */
@@ -418,6 +428,8 @@ import { SITE } from '../consts';
       `date: ${dateEl.value || localDateString()}`,
       `tags: [${tags.join(', ')}]`,
       `draft: ${draftEl.checked}`,
+      `pinned: ${pinnedEl.checked}`,
+      `order: ${Number(orderEl.value) || 0}`,
       '---',
       '',
     ];
@@ -444,6 +456,8 @@ import { SITE } from '../consts';
         date: read('date'),
         tags: read('tags').replace(/^\[|\]$/g, ''),
         draft: read('draft'),
+        pinned: read('pinned'),
+        order: read('order'),
       },
     };
   }
@@ -836,6 +850,8 @@ import { SITE } from '../consts';
             if (fields.date) dateEl.value = fields.date;
             if (fields.tags) tagsEl.value = fields.tags;
             if (fields.draft) draftEl.checked = fields.draft === 'true';
+            if (fields.pinned) pinnedEl.checked = fields.pinned === 'true';
+            if (fields.order) orderEl.value = fields.order;
             render();
             setStatus(fields.title ? `已导入《${fields.title}》。` : '已导入 Markdown。');
           } catch {

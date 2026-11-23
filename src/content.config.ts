@@ -11,6 +11,10 @@ const posts = defineCollection({
     tags: z.array(z.string()).default([]),
     /** 写成 draft: true 就只在本地预览，不构建上线 */
     draft: z.boolean().default(false),
+    /** 勾上置顶：排在所有普通文章前面 */
+    pinned: z.boolean().default(false),
+    /** 排序权重：数字越大越靠前，默认 0 */
+    order: z.number().default(0),
   }),
 });
 

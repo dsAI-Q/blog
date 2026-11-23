@@ -10,7 +10,10 @@ const { post } = Astro.props;
 ---
 
 <a class="post-card" href={`/posts/${post.id}/`}>
-  <h2>{post.data.title}</h2>
+  <h2>
+    {post.data.pinned && <span class="pin">置顶</span>}
+    {post.data.title}
+  </h2>
   {post.data.description && <p>{post.data.description}</p>}
   <div class="meta">
     <time datetime={isoDate(post.data.date)}>{formatDate(post.data.date)}</time>

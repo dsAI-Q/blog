@@ -5,9 +5,9 @@ import SidePanel from '../components/SidePanel.astro';
 import { SITE } from '../consts';
 import { GROUPS, INTRO } from '../data/links';
 import { getCollection } from 'astro:content';
-import { sortByDateDesc } from '../utils';
+import { sortPosts } from '../utils';
 
-const posts = sortByDateDesc(await getCollection('posts', ({ data }) => !data.draft));
+const posts = sortPosts(await getCollection('posts', ({ data }) => !data.draft));
 const latest = posts.slice(0, 8);
 ---
 
