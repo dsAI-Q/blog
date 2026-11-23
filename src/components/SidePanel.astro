@@ -1,0 +1,37 @@
+---
+import type { ResourceItem } from '../data/links';
+
+interface Props {
+  title: string;
+  note?: string;
+  items: ResourceItem[];
+}
+
+const { title, note, items } = Astro.props;
+---
+
+<section class="panel">
+  <h2 class="panel-head">
+    {title}
+    {note && <span class="panel-note">{note}</span>}
+  </h2>
+  <ul class="panel-list">
+    {
+      items.map((item) => (
+        <li>
+          {item.href ? (
+            <a href={item.href} target="_blank" rel="noopener noreferrer">
+              <span class="panel-label">{item.label}</span>
+              {item.note && <span class="panel-sub">{item.note}</span>}
+            </a>
+          ) : (
+            <div class="panel-static">
+              <span class="panel-label">{item.label}</span>
+              {item.note && <span class="panel-sub copyable">{item.note}</span>}
+            </div>
+          )}
+        </li>
+      ))
+    }
+  </ul>
+</section>

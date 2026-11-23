@@ -1,14 +1,14 @@
 ---
 import Base from '../layouts/Base.astro';
 import PostCard from '../components/PostCard.astro';
-import ResourceGroups from '../components/ResourceGroups.astro';
+import SidePanel from '../components/SidePanel.astro';
 import { SITE } from '../consts';
-import { INTRO, RESOURCE_GROUPS } from '../data/links';
+import { GROUPS, INTRO } from '../data/links';
 import { getCollection } from 'astro:content';
 import { sortByDateDesc } from '../utils';
 
 const posts = sortByDateDesc(await getCollection('posts', ({ data }) => !data.draft));
-const latest = posts.slice(0, 5);
+const latest = posts.slice(0, 8);
 ---
 
 <Base>
@@ -23,52 +23,66 @@ const latest = posts.slice(0, 5);
     />
   </figure>
 
-  <section class="welcome">
-    <h1>
-      {INTRO.headline}
-      <span class="subhead">{INTRO.subhead}</span>
-    </h1>
-    <p class="lede">{INTRO.lead}</p>
+  <div class="home-strip">
+    <p class="strip-text">{INTRO.lead}</p>
+    <nav class="strip-links" aria-label="快捷入口">
+      <a href="/vip/">Ai一对一陪练</a>
+      <a href="/archive/">全部文章</a>
+      <a href="/rss.xml">RSS</a>
+    </nav>
+  </div>
 
-    <div class="cta">
-      {
-        INTRO.primary.map((link) => (
-          <a class="btn" href={link.href} target="_blank" rel="noopener noreferrer">
-            {link.label}
-          </a>
-        ))
-      }
-      <a class="btn ghost" href={INTRO.secondary.href} target="_blank" rel="noopener noreferrer">
-        {INTRO.secondary.label} →
-      </a>
+  <div class="home-grid">
+    <div class="col col-left">
+      <SidePanel
+        title={GROUPS.study.title}
+        note={GROUPS.study.note}
+        items={GROUPS.study.items}
+      />
     </div>
-  </section>
 
-  <ResourceGroups groups={RESOURCE_GROUPS} />
+    <section class="col col-main panel">
+      <h2 class="panel-head">
+        最新文章
+        <span class="panel-note">{posts.length} 篇</span>
+      </h2>
 
-  <section class="latest">
-    <h2 class="section-title">最新文章</h2>
-    {
-      latest.length === 0 ? (
-        <p class="muted" style="padding-block: 1.5rem">
-          还没有文章。把 Markdown 放进 <code>src/content/posts/</code>，或者用<a href="/edit/">编辑器</a>写一篇。
-        </p>
-      ) : (
-        <ul class="post-list">
-          {latest.map((post) => (
-            <li>
-              <PostCard post={post} />
-            </li>
-          ))}
-        </ul>
-      )
-    }
-    {
-      posts.length > latest.length && (
-        <p class="more">
-          <a href="/archive/">全部 {posts.length} 篇文章 →</a>
-        </p>
-      )
-    }
-  </section>
+      {
+        latest.length === 0 ? (
+          <p class="muted" style="padding: 1rem 1.1rem 1.5rem">
+            还没有文章。用<a href="/edit/">编辑器</a>写第一篇吧。
+          </p>
+        ) : (
+          <ul class="post-list post-list-inset">
+            {latest.map((post) => (
+              <li>
+                <PostCard post={post} />
+              </li>
+            ))}
+          </ul>
+        )
+      }
+
+      {
+        posts.length > latest.length && (
+          <p class="panel-foot">
+            <a href="/archive/">全部 {posts.length} 篇文章 →</a>
+          </p>
+        )
+      }
+    </section>
+
+    <div class="col col-right">
+      <SidePanel
+        title={GROUPS.platforms.title}
+        note={GROUPS.platforms.note}
+        items={GROUPS.platforms.items}
+      />
+      <SidePanel
+        title={GROUPS.drives.title}
+        note={GROUPS.drives.note}
+        items={GROUPS.drives.items}
+      />
+    </div>
+  </div>
 </Base>

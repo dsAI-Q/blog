@@ -22,6 +22,7 @@ export const SITE = {
     { href: '/archive/', label: '归档' },
     { href: '/tags/', label: '标签' },
     { href: '/links/', label: '外链' },
+    { href: '/vip/', label: 'Ai陪练' },
     { href: '/about/', label: '关于' },
     { href: '/edit/', label: '写文章' },
   ],
