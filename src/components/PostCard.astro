@@ -11,7 +11,7 @@ const { post } = Astro.props;
 
 <a class="post-card" href={`/posts/${post.id}/`}>
   <h2>{post.data.title}</h2>
-  <p>{post.data.description}</p>
+  {post.data.description && <p>{post.data.description}</p>}
   <div class="meta">
     <time datetime={isoDate(post.data.date)}>{formatDate(post.data.date)}</time>
     {
