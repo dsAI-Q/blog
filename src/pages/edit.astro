@@ -19,6 +19,7 @@ import { SITE } from '../consts';
     <div class="ed-bar" role="toolbar" aria-label="编辑操作">
       <div class="ed-group">
         <button type="button" data-act="paste">粘贴 Markdown</button>
+        <button type="button" data-act="load">读取已有文章</button>
         <button type="button" data-act="folder">选择博客文件夹</button>
         <button type="button" data-act="image">插入图片</button>
       </div>
@@ -785,8 +786,55 @@ import { SITE } from '../consts';
     throw new Error('连续 3 次都冲突：这个文件正被别的工具改动，或者你在别处刚提交过。刷新页面再发一次。');
   }
 
-  async function checkConnection() {
+  /** 读取远端已有文章，用来改排序、置顶或修订正文 */
+  async function loadPost() {
     const cfg = readConfig();
+    if (!cfg.owner || !cfg.repo || !cfg.token) {
+      setStatus('读取已有文章要先在「发布设置」里填 owner / repo / token。', 'warn');
+      return;
+    }
+    const slug = slugEl.value.trim();
+    if (!slug) {
+      setStatus('先在「文件名 / URL」里填那篇文章的文件名（URL 最后一段）。', 'warn');
+      return;
+    }
+
+    const path = `src/content/posts/${slug}.md`;
+    setStatus('正在读取……');
+    try {
+      const remote = await readRemote(cfg, path);
+      if (!remote.exists) {
+        setStatus(`远端没有 ${path}，检查文件名是否写对。`, 'err');
+        return;
+      }
+
+      const res = await fetch(
+        `${contentApi(cfg, path)}?ref=${encodeURIComponent(cfg.branch)}`,
+        { headers: ghHeaders(cfg), cache: 'no-store' },
+      );
+      const data = (await res.json()) as { content?: string };
+      if (!data.content) throw new Error('响应里没有文件内容');
+
+      const binary = atob(data.content.replace(/\n/g, ''));
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      const { body, fields } = parseFrontmatter(new TextDecoder().decode(bytes));
+
+      mdEl.value = body.trimStart();
+      titleEl.value = fields.title ?? '';
+      descEl.value = fields.description ?? '';
+      dateEl.value = fields.date ?? localDateString();
+      tagsEl.value = fields.tags ?? '';
+      draftEl.checked = fields.draft === 'true';
+      pinnedEl.checked = fields.pinned === 'true';
+      orderEl.value = fields.order || '0';
+      render();
+      setStatus(`已读取 ${path}。改完点「发布到 GitHub」会覆盖它。`);
+    } catch (error) {
+      setStatus(`读取失败：${(error as Error).message}`, 'err');
+    }
+  }
+
+  async function checkConnection() {    const cfg = readConfig();
     if (!cfg.owner || !cfg.repo || !cfg.token) {
       setStatus('先填 owner / repo / token。', 'warn');
       return;
@@ -861,6 +909,9 @@ import { SITE } from '../consts';
         }
         case 'folder':
           await pickFolder();
+          break;
+        case 'load':
+          await loadPost();
           break;
         case 'image':
           imageInput.click();
