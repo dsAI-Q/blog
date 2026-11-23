@@ -16,7 +16,7 @@ export const SITE = {
     height: 1024,
     alt: '大圣Ai自习室：专注 Ai 知识、工具、资料分享',
   },
-  /** 页头导航 */
+  /** 页头导航：编辑器 /edit/ 不在导航里露出，只留直链 */
   nav: [
     { href: '/', label: '首页' },
     { href: '/archive/', label: '归档' },
@@ -24,7 +24,6 @@ export const SITE = {
     { href: '/links/', label: '外链' },
     { href: '/vip/', label: 'Ai陪练' },
     { href: '/about/', label: '关于' },
-    { href: '/edit/', label: '写文章' },
   ],
 } as const;
 
