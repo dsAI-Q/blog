@@ -5,6 +5,7 @@ date: 2026-11-23
 tags: [公众号, AI]
 draft: false
 source: "https://mp.weixin.qq.com/s/uJwhrR7tS7CtLQvMZ0Rejg"
+order: 1
 ---
 想在自己电脑上跑AI大模型，是不是总被三件事劝退：电脑配置太低跑不动、模型下载慢到怀疑人生、软件操作复杂看不懂？
 
