@@ -14,4 +14,13 @@ const posts = defineCollection({
   }),
 });
 
-export const collections = { posts };
+/** 单页正文（招生简章、关于页这类），不进文章列表 */
+const pages = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/pages' }),
+  schema: z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+  }),
+});
+
+export const collections = { posts, pages };

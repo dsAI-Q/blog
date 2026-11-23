@@ -1,69 +1,123 @@
 ---
 import Base from '../layouts/Base.astro';
-import { GROUPS } from '../data/links';
+import { getEntry, render } from 'astro:content';
 
-const contact = GROUPS.study.items.filter((item) => ['公众号 大时代Ai', 'QQ 学习群', 'Telegram 电报', 'B 站 UP 主'].includes(item.label));
+const entry = await getEntry('pages', 'vip');
+if (!entry) throw new Error('缺少 src/content/pages/vip.md');
 
-const items = [
-  { title: 'ComfyUI 出图陪跑', desc: '从装环境到跑出第一张图，卡在哪就解决哪，不背文档。' },
-  { title: '工作流排查', desc: '报错、爆显存、节点缺失、出图发灰，带着你的工作流来现场看。' },
-  { title: '模型与参数选型', desc: '按你的显卡和需求挑模型、定采样参数，不盲目抄配置。' },
-  { title: '选题与内容', desc: '想拍视频或写文章但不知道做什么，一起把方向定下来。' },
+const { Content } = await render(entry);
+
+const contacts = [
+  { label: '微信', value: 'qrock168' },
+  { label: 'QQ', value: '1416655191' },
 ];
 ---
 
 <Base
   title="Ai一对一陪练"
-  description="Ai 一对一陪练：ComfyUI 出图、工作流排查、模型选型，按你的实际情况带着跑通。"
+  description="ComfyUI 一对一实战教学：零基础部署、工作流搭建、问题当场解决。入门级 500 元，终身陪练 2000 元。"
 >
   <section class="welcome">
     <h1>
       Ai一对一陪练
-      <span class="tag">筹备中</span>
+      <span class="tag">招生中</span>
     </h1>
     <p class="lede">
-      一对一的实战陪练，不是录播课。你带着自己的机器、自己的需求来，我们把问题在这一次聊透。
-      目前在做排期和形式上的准备，先占个位置。
+      ComfyUI 一对一实战教学，零基础也能上手：部署、插件、环境、工作流，全程手把手，问题当场解决。
     </p>
+
     <div class="cta">
-      <a class="btn" href={GROUPS.study.items[0].href} target="_blank" rel="noopener noreferrer">
-        先看视频教程
-      </a>
-      <a class="btn ghost" href="/links/">全部资源与渠道</a>
+      <a class="btn" href="#enroll">看套餐与报名方式</a>
+      <a class="btn ghost" href="/links/">先看免费教程</a>
     </div>
-  </section>
 
-  <h2 class="section-title">能陪你做什么</h2>
-  <ul class="card-grid">
-    {
-      items.map((item) => (
-        <li class="card">
-          <h3>{item.title}</h3>
-          <p>{item.desc}</p>
-        </li>
-      ))
-    }
-  </ul>
-
-  <h2 class="section-title">开通方式</h2>
-  <div class="card" style="margin-block: 1.25rem">
-    <p>
-      还没开放购买。等排期定了会先在这里放出形式和价格，公众号和 QQ 群会第一时间通知。
-    </p>
-    <ul class="tag-list" style="margin-block-start: 0.75rem">
+    <ul class="contact-row">
       {
-        contact.map((item) => (
+        contacts.map((item) => (
           <li>
-            {item.href ? (
-              <a href={item.href} target="_blank" rel="noopener noreferrer">
-                {item.label}
-              </a>
-            ) : (
-              <span class="tag">{item.label}</span>
-            )}
+            <span class="contact-label">{item.label}</span>
+            <span class="contact-value copyable">{item.value}</span>
           </li>
         ))
       }
     </ul>
-  </div>
+  </section>
+
+  <article class="prose prose-wide">
+    <Content />
+  </article>
+
+  <section id="enroll" class="card enroll">
+    <h2>报名流程</h2>
+    <ol>
+      <li>加微信 <code>qrock168</code> 或 QQ <code>1416655191</code>，说明想报哪个套餐。</li>
+      <li>按价格缴费（微信 / 支付宝），只认页面里的收款码。</li>
+      <li>大圣老师排期，安排一对一教学。</li>
+    </ol>
+    <p class="muted">缴费前请读完上面的退款与法律条款，缴费即视为同意。</p>
+  </section>
 </Base>
+
+<style>
+  .contact-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 2rem;
+    list-style: none;
+    padding: 0;
+    margin-block-start: 1.25rem;
+    font-size: 0.95rem;
+  }
+
+  .contact-row li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .contact-label {
+    color: var(--ink-2);
+    font-size: 0.8rem;
+  }
+
+  .contact-value {
+    font-weight: 700;
+    user-select: all;
+  }
+
+  .prose-wide {
+    max-inline-size: 72ch;
+    padding-block-end: 1rem;
+  }
+
+  .prose-wide :global(h3) {
+    margin-block-start: 2.2em;
+  }
+
+  .prose-wide :global(table) {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .enroll {
+    margin-block: 2rem 4rem;
+    max-inline-size: 72ch;
+  }
+
+  .enroll h2 {
+    font-size: 1.15rem;
+  }
+
+  .enroll ol {
+    margin-block: 0.75rem;
+    padding-inline-start: 1.3em;
+  }
+
+  .enroll li + li {
+    margin-block-start: 0.4rem;
+  }
+
+  .enroll p {
+    margin-block-start: 0.75rem;
+  }
+</style>
