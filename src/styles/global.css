@@ -498,16 +498,47 @@
   .panel-static {
     display: grid;
     gap: 0.15rem;
-    padding: 0.45rem 0.5rem;
-    border-radius: 0.4rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid transparent;
+    border-radius: 0.45rem;
     color: var(--ink-1);
     text-decoration: none;
     font-size: 0.9rem;
     line-height: 1.4;
   }
 
-  .panel-list a:hover {
-    background-color: var(--code-bg);
+  /* 侧栏链接做成悬浮按钮：悬停时抬起、描边、投影 */
+  .panel-list a {
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .panel-list a:hover,
+  .panel-list a:focus-visible {
+    background-color: var(--bg);
+    border-color: var(--line);
+    box-shadow: 0 8px 20px -10px rgb(0 0 0 / 0.45);
+    transform: translateY(-2px);
+  }
+
+  .panel-list a:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px -6px rgb(0 0 0 / 0.4);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-list a {
+      transition: none;
+    }
+
+    .panel-list a:hover,
+    .panel-list a:focus-visible,
+    .panel-list a:active {
+      transform: none;
+    }
   }
 
   .panel-sub {
