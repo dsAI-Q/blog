@@ -1,9 +1,9 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
-// TODO: 换成你自己的域名（影响 canonical、sitemap、RSS 里的绝对地址）
+// TODO: 换自定义域名时改这一处（影响 canonical、sitemap、RSS 里的绝对地址）
 export default defineConfig({
-  site: 'https://example.com',
+  site: 'https://dashengai.pages.dev',
   trailingSlash: 'always',
   integrations: [
     sitemap({
