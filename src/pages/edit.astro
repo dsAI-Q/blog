@@ -26,6 +26,7 @@ import { SITE } from '../consts';
         <div class="ed-posts-tools">
           <button type="button" data-act="refresh-posts">刷新列表</button>
         </div>
+        <p class="ed-posts-msg" id="posts-msg" hidden></p>
         <p class="ed-posts-hint muted">拖动调整顺序 · 点标题载入 · 🗑 删除</p>
         <ul class="ed-posts-list" id="posts-list"></ul>
       </div>
@@ -235,6 +236,21 @@ import { SITE } from '../consts';
     margin: 0.45rem 0 0.25rem;
     padding-inline: 0.7rem;
     font-size: 0.7rem;
+  }
+
+  .ed-posts-msg {
+    margin: 0.45rem 0.7rem 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--ink-2);
+  }
+
+  .ed-posts-msg[data-kind='warn'] {
+    color: oklch(55% 0.14 60);
+  }
+
+  .ed-posts-msg[data-kind='err'] {
+    color: oklch(55% 0.18 25);
   }
 
   .ed-posts-list {
@@ -885,10 +901,23 @@ import { SITE } from '../consts';
   }
 
   function ghHeaders(cfg: PublishConfig) {
-    return {
-      Authorization: `Bearer ${cfg.token}`,
+    const headers: Record<string, string> = {
       Accept: 'application/vnd.github+json',
       'Content-Type': 'application/json',
+    };
+    // 没有 token 也能读公开仓库，只是不能再提交
+    if (cfg.token) headers.Authorization = `Bearer ${cfg.token}`;
+    return headers;
+  }
+
+  /** 仓库默认指向这个站自己的仓库，没填设置也能列文章 */
+  function ghConfig(): PublishConfig {
+    const saved = readConfig();
+    return {
+      owner: saved.owner || 'dsAI-Q',
+      repo: saved.repo || 'blog',
+      branch: saved.branch || 'main',
+      token: saved.token,
     };
   }
 
@@ -982,11 +1011,7 @@ import { SITE } from '../consts';
 
   /** 读取远端已有文章，用来改排序、置顶或修订正文 */
   async function loadPost() {
-    const cfg = readConfig();
-    if (!cfg.owner || !cfg.repo || !cfg.token) {
-      setStatus('读取已有文章要先在「发布设置」里填 owner / repo / token。', 'warn');
-      return;
-    }
+    const cfg = ghConfig();
     const slug = slugEl.value.trim();
     if (!slug) {
       setStatus('先在「文件名 / URL」里填那篇文章的文件名（URL 最后一段）。', 'warn');
@@ -1084,7 +1109,25 @@ import { SITE } from '../consts';
   const shellEl = $<HTMLElement>('#ed-shell');
   const listEl = $<HTMLElement>('#posts-list');
   const countEl = $<HTMLElement>('#posts-count');
+  const msgEl = $<HTMLElement>('#posts-msg');
   const toggleEl = $<HTMLButtonElement>('#posts-toggle');
+
+  function panelMsg(text: string, kind: 'info' | 'warn' | 'err' = 'info') {
+    if (!text) {
+      msgEl.hidden = true;
+      msgEl.textContent = '';
+      return;
+    }
+    msgEl.hidden = false;
+    msgEl.dataset.kind = kind;
+    msgEl.textContent = text;
+  }
+
+  function needToken(): boolean {
+    if (readConfig().token) return true;
+    panelMsg('调整顺序和删除需要 GitHub token：展开页面底部「发布设置」填一次即可。', 'warn');
+    return false;
+  }
 
   let remotePosts: RemotePost[] = [];
   let dragIndex = -1;
@@ -1105,11 +1148,8 @@ import { SITE } from '../consts';
   }
 
   async function fetchPostList() {
-    const cfg = readConfig();
-    if (!cfg.owner || !cfg.repo || !cfg.token) {
-      setStatus('文章列表需要先在「发布设置」里填 owner / repo / token。', 'warn');
-      return;
-    }
+    const cfg = ghConfig();
+    panelMsg(cfg.token ? '' : '只读模式：不用 token 也能看列表，拖动排序和删除需要先填 token。');
     setStatus('正在读取文章列表……');
     try {
       const listRes = await fetch(
@@ -1147,7 +1187,9 @@ import { SITE } from '../consts';
       renderPostList();
       setStatus(`已载入 ${remotePosts.length} 篇文章。`);
     } catch (error) {
-      setStatus(`读取列表失败：${(error as Error).message}`, 'err');
+      const message = `读取列表失败：${(error as Error).message}`;
+      panelMsg(message, 'err');
+      setStatus(message, 'err');
     }
   }
 
@@ -1224,6 +1266,11 @@ import { SITE } from '../consts';
 
   /** 拖动后写入递减权重，让列表顺序变成真实顺序 */
   async function reorderTo(from: number, to: number) {
+    if (!needToken()) {
+      await fetchPostList();
+      return;
+    }
+
     const next = [...remotePosts];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
@@ -1240,7 +1287,7 @@ import { SITE } from '../consts';
       return;
     }
 
-    const cfg = readConfig();
+    const cfg = ghConfig();
     setStatus(`正在保存顺序（${updates.length} 篇）……`);
     try {
       for (const { post, order } of updates) {
@@ -1290,7 +1337,8 @@ import { SITE } from '../consts';
     if (!window.confirm(`删除《${post.title}》？\n\n会直接从仓库删掉这个文件，构建后线上也会消失，无法撤销。`)) {
       return;
     }
-    const cfg = readConfig();
+    if (!needToken()) return;
+    const cfg = ghConfig();
     setStatus(`正在删除 ${post.slug}……`);
     try {
       const res = await fetch(contentApi(cfg, post.path), {
@@ -1432,11 +1480,8 @@ import { SITE } from '../consts';
       );
     }
 
-    // 配好了 GitHub 凭据就顺便把左侧文章列表拉出来
-    const cfg = readConfig();
-    if (cfg.owner && cfg.repo && cfg.token) {
-      void fetchPostList();
-    }
+    // 列表随时可读（公开仓库不需要 token），有 token 才能改
+    void fetchPostList();
 
     render();
   }
