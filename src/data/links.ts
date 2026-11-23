@@ -25,6 +25,8 @@ export const INTRO = {
     label: '更多高质量工作流',
     href: 'https://docs.qq.com/doc/p/425ff71f35534e92d83b857d6a2b576f147a3215',
   },
+  /** 首页横幅右下角那行联系方式 */
+  contact: { wechat: 'qrock168', qq: '1416655191' },
 };
 
 /** 首页左侧栏：学习渠道 */

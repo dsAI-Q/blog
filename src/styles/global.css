@@ -755,15 +755,15 @@
   /* 正文排版 */
   .prose {
     /* ch 是「0」的宽度，中文一个字约半个 ch：60ch 只有 480px，太窄。
-       这里按 em 给行宽，52em ≈ 830px，长文页再套 .page-column 收口。 */
-    max-inline-size: min(100%, 52em);
+       这里按 em 给行宽，60em ≈ 960px，长文页再套 .page-column 收口。 */
+    max-inline-size: min(100%, 60em);
     margin-inline: auto;
     padding-block-end: 3rem;
   }
 
   /* 文章页/单页：hered 区和正文共用一条居中栏，别贴着左边留白 */
   .page-column {
-    inline-size: min(100%, 58em);
+    inline-size: min(100%, 66em);
     margin-inline: auto;
   }
 
