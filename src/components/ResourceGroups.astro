@@ -1,0 +1,35 @@
+---
+import type { ResourceGroup } from '../data/links';
+
+interface Props {
+  groups: ResourceGroup[];
+}
+
+const { groups } = Astro.props;
+---
+
+{
+  groups.map((group) => (
+    <section class="resource-group">
+      <h2 class="section-title">{group.title}</h2>
+      {group.note && <p class="group-note muted">{group.note}</p>}
+      <ul class="card-grid">
+        {group.items.map((item) => (
+          <li class="card">
+            <h3>
+              {item.href ? (
+                <a href={item.href} target="_blank" rel="noopener noreferrer">
+                  {item.label}
+                </a>
+              ) : (
+                <span>{item.label}</span>
+              )}
+            </h3>
+            {item.note &&
+              (item.href ? <p>{item.note}</p> : <p class="card-value copyable">{item.note}</p>)}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))
+}

@@ -1,0 +1,31 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE, SOCIALS } from '../consts';
+---
+
+<Base title="关于" description={`关于 ${SITE.title} 和作者。`}>
+  <section class="hero">
+    <h1>关于</h1>
+  </section>
+
+  <div class="prose">
+    <p>
+      这里写你是谁、做什么、这个站放什么。两三句话就够，别写成简历。
+    </p>
+
+    <h2>关注</h2>
+    <ul>
+      {SOCIALS.map((s) => (
+        <li>
+          <a href={s.href} target="_blank" rel="me noopener">{s.label}</a>
+        </li>
+      ))}
+    </ul>
+
+    <h2>关于这个站</h2>
+    <p>
+      用 Astro 搭的静态站：文章是 Markdown，构建时生成静态 HTML，没有数据库和后台。
+      全站默认跟随系统深色模式，可以订阅 <a href="/rss.xml">RSS</a>。
+    </p>
+  </div>
+</Base>

@@ -1,0 +1,915 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../consts';
+---
+
+<Base title="写文章" description="本地 Markdown 编辑器：粘贴稿件、实时预览、一键发布。" wide>
+  <Fragment slot="head">
+    <meta name="robots" content="noindex, nofollow" />
+  </Fragment>
+
+  <section class="ed">
+    <div class="ed-head">
+      <h1>写文章</h1>
+      <p class="muted">
+        粘贴公众号稿件或 Markdown，右边实时出网页效果。保存到仓库后 <code>git push</code> 就会构建上线。
+      </p>
+    </div>
+
+    <div class="ed-bar" role="toolbar" aria-label="编辑操作">
+      <div class="ed-group">
+        <button type="button" data-act="paste">粘贴 Markdown</button>
+        <button type="button" data-act="folder">选择博客文件夹</button>
+        <button type="button" data-act="image">插入图片</button>
+      </div>
+      <div class="ed-group" role="group" aria-label="格式">
+        <button type="button" data-format="h2" title="二级标题">H2</button>
+        <button type="button" data-format="bold" title="粗体"><b>B</b></button>
+        <button type="button" data-format="quote" title="引用">“”</button>
+        <button type="button" data-format="ul" title="列表">•</button>
+        <button type="button" data-format="code" title="代码块">&lt;/&gt;</button>
+        <button type="button" data-format="link" title="链接">链接</button>
+      </div>
+      <div class="ed-group">
+        <button type="button" data-act="copy-md">复制 MD</button>
+        <button type="button" data-act="download">下载 .md</button>
+        <button type="button" data-act="copy-html">复制网页 HTML</button>
+        <button type="button" data-act="save" class="primary">保存到仓库</button>
+        <button type="button" data-act="publish" class="primary">发布到 GitHub</button>
+      </div>
+    </div>
+
+    <div class="ed-meta">
+      <label>
+        <span>标题</span>
+        <input id="f-title" type="text" autocomplete="off" placeholder="一篇文章的标题" />
+      </label>
+      <label>
+        <span>日期</span>
+        <input id="f-date" type="date" />
+      </label>
+      <label>
+        <span>标签（逗号分隔）</span>
+        <input id="f-tags" type="text" autocomplete="off" placeholder="教程, 工作流" />
+      </label>
+      <label>
+        <span>文件名 / URL</span>
+        <input id="f-slug" type="text" autocomplete="off" spellcheck="false" placeholder="post-20261123-2015" />
+      </label>
+      <label class="ed-wide">
+        <span>摘要（列表页和搜索结果用）</span>
+        <input id="f-desc" type="text" autocomplete="off" placeholder="一两句话，说清这篇讲什么" />
+      </label>
+      <label class="ed-check">
+        <input id="f-draft" type="checkbox" />
+        <span>存为草稿，不发布</span>
+      </label>
+    </div>
+
+    <div class="ed-split">
+      <div class="ed-pane">
+        <div class="ed-pane-head">
+          <span>Markdown</span>
+          <span id="counter" class="muted">0 字</span>
+        </div>
+        <label class="visually-hidden" for="md">Markdown 正文</label>
+        <textarea id="md" spellcheck="false" placeholder="在这里粘贴 Markdown，或者直接写……"></textarea>
+      </div>
+      <div class="ed-pane">
+        <div class="ed-pane-head">
+          <span>预览</span>
+          <span class="muted">正文排版同文章页</span>
+        </div>
+        <article id="preview" class="prose ed-preview"></article>
+      </div>
+    </div>
+
+    <p id="status" class="ed-status" role="status" aria-live="polite"></p>
+
+    <details class="ed-settings">
+      <summary>发布设置（GitHub）</summary>
+      <p class="muted">
+        填一次就存在本机浏览器里。Token 只在本页 JS 里用，直接调 GitHub API；需要一个有
+        <code>contents: write</code> 权限的细粒度 Token。不想碰 Token 就用「保存到仓库」+ 手动
+        <code>git push</code>。
+      </p>
+      <div class="ed-meta">
+        <label><span>仓库 owner</span><input id="g-owner" type="text" autocomplete="off" /></label>
+        <label><span>仓库名</span><input id="g-repo" type="text" autocomplete="off" /></label>
+        <label><span>分支</span><input id="g-branch" type="text" autocomplete="off" placeholder="main" /></label>
+        <label class="ed-wide"><span>Token</span><input id="g-token" type="password" autocomplete="off" /></label>
+      </div>
+      <div class="ed-group" style="margin-block-start: 0.75rem">
+        <button type="button" data-act="check">检查连接</button>
+        <button type="button" data-act="save-settings">保存设置</button>
+        <button type="button" data-act="clear-settings">清除</button>
+      </div>
+    </details>
+  </section>
+
+  <input id="file-image" type="file" accept="image/*" multiple hidden />
+</Base>
+
+<style>
+  .ed {
+    padding-block: clamp(1.5rem, 1rem + 2vw, 2.5rem) 4rem;
+  }
+
+  .ed-head h1 {
+    font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+  }
+
+  .ed-head p {
+    margin-block-start: 0.5rem;
+    max-inline-size: 60ch;
+  }
+
+  .ed-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    align-items: center;
+    padding-block: 1rem;
+    border-block: 1px solid var(--line);
+    margin-block-start: 1.5rem;
+  }
+
+  .ed-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .ed-bar button {
+    font: inherit;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--ink-1);
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.45rem;
+    padding: 0.35rem 0.7rem;
+    cursor: pointer;
+  }
+
+  .ed-bar button:hover {
+    border-color: var(--ink-2);
+  }
+
+  .ed-bar button.primary {
+    border-color: var(--brand);
+    color: var(--brand);
+    font-weight: 600;
+  }
+
+  .ed-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: 0.75rem 1rem;
+    margin-block: 1.25rem;
+  }
+
+  .ed-meta label {
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    color: var(--ink-2);
+  }
+
+  .ed-meta .ed-wide {
+    grid-column: 1 / -1;
+  }
+
+  .ed-meta input[type='text'],
+  .ed-meta input[type='date'],
+  .ed-meta input[type='password'],
+  .ed-meta input:not([type]) {
+    font: inherit;
+    font-size: 0.95rem;
+    color: var(--ink-1);
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.45rem;
+    padding: 0.45rem 0.6rem;
+    field-sizing: content;
+    min-inline-size: 0;
+  }
+
+  .ed-check {
+    display: flex !important;
+    align-items: center;
+    gap: 0.45rem;
+    grid-column: 1 / -1;
+    color: var(--ink-1);
+  }
+
+  .ed-check input {
+    inline-size: 1.05rem;
+    block-size: 1.05rem;
+  }
+
+  .ed-split {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    min-block-size: 60vh;
+  }
+
+  @media (min-width: 60rem) {
+    .ed-split {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .ed-pane {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background-color: var(--surface);
+    overflow: hidden;
+    min-block-size: 24rem;
+  }
+
+  .ed-pane-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: var(--ink-2);
+    padding: 0.5rem 0.75rem;
+    border-block-end: 1px solid var(--line);
+  }
+
+  #md {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--ink-1);
+    background: none;
+    border: 0;
+    padding: 0.9rem;
+    resize: vertical;
+    min-block-size: 22rem;
+    block-size: 100%;
+  }
+
+  #md:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: -2px;
+  }
+
+  .ed-preview {
+    padding: 0.9rem 1.1rem 3rem;
+    max-inline-size: none;
+    overflow-y: auto;
+    max-block-size: 70vh;
+  }
+
+  .ed-status {
+    margin-block-start: 1rem;
+    font-size: 0.9rem;
+    color: var(--ink-2);
+    min-block-size: 1.5em;
+  }
+
+  .ed-status[data-kind='ok'] {
+    color: oklch(52% 0.14 150);
+  }
+
+  .ed-status[data-kind='warn'] {
+    color: oklch(55% 0.14 60);
+  }
+
+  .ed-status[data-kind='err'] {
+    color: oklch(55% 0.18 25);
+  }
+
+  .ed-settings {
+    margin-block-start: 2rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+  }
+
+  .ed-settings summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .ed-settings p {
+    font-size: 0.875rem;
+    margin-block: 0.75rem;
+    max-inline-size: 70ch;
+  }
+</style>
+
+<script>
+  import { marked } from 'marked';
+  import DOMPurify from 'dompurify';
+
+  type StatusKind = 'ok' | 'warn' | 'err';
+
+  const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
+  const mdEl = $<HTMLTextAreaElement>('#md');
+  const previewEl = $<HTMLElement>('#preview');
+  const statusEl = $<HTMLElement>('#status');
+  const counterEl = $<HTMLElement>('#counter');
+  const titleEl = $<HTMLInputElement>('#f-title');
+  const descEl = $<HTMLInputElement>('#f-desc');
+  const dateEl = $<HTMLInputElement>('#f-date');
+  const tagsEl = $<HTMLInputElement>('#f-tags');
+  const slugEl = $<HTMLInputElement>('#f-slug');
+  const draftEl = $<HTMLInputElement>('#f-draft');
+  const imageInput = $<HTMLInputElement>('#file-image');
+
+  /* ---------- 状态栏 ---------- */
+  function setStatus(text: string, kind: StatusKind = 'ok') {
+    statusEl.textContent = text;
+    statusEl.dataset.kind = kind;
+  }
+
+  /* ---------- 日期与文件名 ---------- */
+  function localDateString(d = new Date()): string {
+    // toISOString 是 UTC，本地零点前后的日期会差一天
+    const shifted = new Date(d.getTime() - d.getTimezoneOffset() * 60_000);
+    return shifted.toISOString().slice(0, 10);
+  }
+
+  function defaultSlug(): string {
+    const d = new Date();
+    const ymd = localDateString(d).replaceAll('-', '');
+    const hm = `${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+    return `post-${ymd}-${hm}`;
+  }
+
+  dateEl.value ||= localDateString();
+  slugEl.value ||= defaultSlug();
+
+  /* ---------- 预览 ---------- */
+  const markedOptions = { gfm: true, breaks: false, async: false } as const;
+
+  let renderQueued = false;
+  function render() {
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => {
+      renderQueued = false;
+      const html = marked.parse(mdEl.value, markedOptions) as string;
+      previewEl.innerHTML = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+      const chars = mdEl.value.replace(/\s/g, '').length;
+      const minutes = Math.max(1, Math.round(mdEl.value.length / 400));
+      counterEl.textContent = `${chars} 字 · 约 ${minutes} 分钟`;
+    });
+  }
+
+  mdEl.addEventListener('input', render);
+
+  /* ---------- 选中区排版按钮 ---------- */
+  function wrapSelection(before: string, after = '', placeholder = '') {
+    const { selectionStart: start, selectionEnd: end, value } = mdEl;
+    const selected = value.slice(start, end) || placeholder;
+    mdEl.setRangeText(before + selected + after, start, end, 'select');
+    if (!value.slice(start, end)) {
+      mdEl.setSelectionRange(start + before.length, start + before.length + selected.length);
+    }
+    mdEl.focus();
+    render();
+  }
+
+  function prefixLines(prefix: string) {
+    const { selectionStart: start, selectionEnd: end, value } = mdEl;
+    const from = value.lastIndexOf('\n', start - 1) + 1;
+    const to = value.indexOf('\n', end) === -1 ? value.length : value.indexOf('\n', end);
+    const block = value.slice(from, to) || '内容';
+    const next = block
+      .split('\n')
+      .map((line) => (line ? prefix + line : line))
+      .join('\n');
+    mdEl.setRangeText(next, from, to, 'end');
+    mdEl.focus();
+    render();
+  }
+
+  const formatters: Record<string, () => void> = {
+    h2: () => prefixLines('## '),
+    bold: () => wrapSelection('**', '**', '粗体'),
+    quote: () => prefixLines('> '),
+    ul: () => prefixLines('- '),
+    code: () => wrapSelection('\n```ts\n', '\n```\n', 'code'),
+    link: () => wrapSelection('[', '](https://)', '链接文字'),
+  };
+
+  document.querySelectorAll<HTMLButtonElement>('[data-format]').forEach((btn) => {
+    btn.addEventListener('click', () => formatters[btn.dataset.format ?? '']?.());
+  });
+
+  /* ---------- frontmatter ---------- */
+  function frontmatter(): string {
+    const tags = tagsEl.value
+      .split(/[,，]/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const quote = (s: string) => `"${s.replaceAll('"', '\\"')}"`;
+    const lines = [
+      '---',
+      `title: ${quote(titleEl.value.trim() || '未命名')}`,
+      `description: ${quote(descEl.value.trim() || '')}`,
+      `date: ${dateEl.value || localDateString()}`,
+      `tags: [${tags.join(', ')}]`,
+      `draft: ${draftEl.checked}`,
+      '---',
+      '',
+    ];
+    return lines.join('\n');
+  }
+
+  function fullMarkdown(): string {
+    return frontmatter() + mdEl.value.replace(/^\n+/, '');
+  }
+
+  function parseFrontmatter(text: string) {
+    const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+    if (!match) return { body: text, fields: {} as Record<string, string> };
+    const [, yaml, body] = match;
+    const read = (key: string) => {
+      const m = yaml.match(new RegExp(`^${key}:\\s*(.+)$`, 'm'));
+      return m ? m[1].trim().replace(/^["']|["']$/g, '') : '';
+    };
+    return {
+      body,
+      fields: {
+        title: read('title'),
+        description: read('description'),
+        date: read('date'),
+        tags: read('tags').replace(/^\[|\]$/g, ''),
+        draft: read('draft'),
+      },
+    };
+  }
+
+  /* ---------- 剪贴板 ---------- */
+  async function copyText(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.append(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    }
+  }
+
+  async function copyHtml() {
+    const html = wechatHtml(previewEl.innerHTML);
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([mdEl.value], { type: 'text/plain' }),
+        }),
+      ]);
+      setStatus('已复制带样式的 HTML，粘到公众号编辑器里样式会跟着走。');
+    } catch {
+      const ok = await copyText(html);
+      setStatus(ok ? '已复制 HTML 源码（浏览器不支持富文本剪贴板）。' : '复制失败，试试选中预览区手动复制。', ok ? 'ok' : 'err');
+    }
+  }
+
+  /**
+   * 公众号编辑器会剥掉 <style>，所以样式必须内联。
+   * 只做最基本的可读性，不追求和站内一模一样。
+   */
+  function wechatHtml(source: string): string {
+    const styles: Record<string, string> = {
+      P: 'margin:0 0 1.2em;font-size:16px;line-height:1.75;color:#333;letter-spacing:.02em;',
+      H2: 'margin:2em 0 .8em;font-size:19px;line-height:1.4;color:#111;font-weight:700;',
+      H3: 'margin:1.6em 0 .6em;font-size:17px;line-height:1.4;color:#111;font-weight:700;',
+      BLOCKQUOTE: 'margin:1.4em 0;padding:.2em 0 .2em 1em;border-left:3px solid #d8d8d8;color:#666;',
+      PRE: 'margin:1.4em 0;padding:14px;background:#f6f6f6;border-radius:6px;overflow-x:auto;font-size:13px;line-height:1.6;',
+      CODE: 'font-family:Menlo,Consolas,monospace;font-size:13px;background:#f2f2f2;padding:2px 4px;border-radius:3px;',
+      IMG: 'display:block;max-width:100%;height:auto;margin:1.4em auto;border-radius:6px;',
+      A: 'color:#3b5bdb;text-decoration:none;border-bottom:1px solid #c7d2fe;',
+      UL: 'margin:1.2em 0;padding-left:1.4em;',
+      OL: 'margin:1.2em 0;padding-left:1.4em;',
+      LI: 'margin:.4em 0;font-size:16px;line-height:1.75;color:#333;',
+      TABLE: 'width:100%;border-collapse:collapse;font-size:15px;margin:1.4em 0;',
+      TH: 'border:1px solid #e5e5e5;padding:8px;background:#fafafa;text-align:left;',
+      TD: 'border:1px solid #e5e5e5;padding:8px;',
+      HR: 'border:0;border-top:1px solid #e5e5e5;margin:2.4em 0;',
+    };
+    const doc = new DOMParser().parseFromString(`<div>${source}</div>`, 'text/html');
+    for (const [tag, style] of Object.entries(styles)) {
+      doc.querySelectorAll(tag).forEach((el) => {
+        el.setAttribute('style', style);
+        if (tag === 'PRE') el.querySelectorAll('CODE').forEach((c) => c.removeAttribute('style'));
+      });
+    }
+    return doc.body.innerHTML;
+  }
+
+  /* ---------- 文件系统（本地保存） ---------- */
+  type DirHandle = FileSystemDirectoryHandle;
+
+  const IDB_NAME = 'dashai-blog';
+  function idb(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('handles');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function storeHandle(handle: DirHandle) {
+    const db = await idb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').put(handle, 'root');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function loadHandle(): Promise<DirHandle | undefined> {
+    try {
+      const db = await idb();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction('handles', 'readonly');
+        const req = tx.objectStore('handles').get('root');
+        req.onsuccess = () => resolve(req.result as DirHandle | undefined);
+        req.onerror = () => reject(req.error);
+      });
+    } catch {
+      return undefined;
+    }
+  }
+
+  let rootHandle: DirHandle | undefined;
+
+  async function ensureRoot(): Promise<DirHandle | undefined> {
+    if (rootHandle) {
+      const perm = await rootHandle.queryPermission({ mode: 'readwrite' });
+      if (perm === 'granted') return rootHandle;
+      if ((await rootHandle.requestPermission({ mode: 'readwrite' })) === 'granted') return rootHandle;
+    }
+    return undefined;
+  }
+
+  async function pickFolder() {
+    if (!('showDirectoryPicker' in window)) {
+      setStatus('这个浏览器不支持直接写文件夹（需要 Chrome / Edge）。用「下载 .md」再手动放进 src/content/posts/。', 'warn');
+      return;
+    }
+    rootHandle = await (window as unknown as { showDirectoryPicker: (o?: object) => Promise<DirHandle> })
+      .showDirectoryPicker({ mode: 'readwrite', id: 'blog-root' });
+    await storeHandle(rootHandle);
+    setStatus(`已连接：${rootHandle.name}/。现在「保存到仓库」和插图都能直接用。`);
+  }
+
+  async function writeFile(parts: string[], data: Blob | string | ArrayBuffer) {
+    const root = await ensureRoot();
+    if (!root) throw new Error('还没选博客文件夹，或者刚才的写入权限被拒绝了。');
+    let dir = root;
+    for (const part of parts.slice(0, -1)) {
+      dir = await dir.getDirectoryHandle(part, { create: true });
+    }
+    const fileHandle = await dir.getFileHandle(parts.at(-1)!, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(data);
+    await writable.close();
+  }
+
+  async function saveToRepo() {
+    const slug = slugEl.value.trim() || defaultSlug();
+    slugEl.value = slug;
+    try {
+      await writeFile(['src', 'content', 'posts', `${slug}.md`], fullMarkdown());
+      setStatus(
+        `已写入 src/content/posts/${slug}.md。回到终端执行 git add . && git commit -m "post: ${slug}" && git push 就发布了。`,
+      );
+    } catch (error) {
+      setStatus(`保存失败：${(error as Error).message}`, 'err');
+    }
+  }
+
+  /* ---------- 插图 ---------- */
+  function safeName(name: string) {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9.\-_]/g, '-')
+      .replace(/-+/g, '-');
+  }
+
+  async function insertImages(files: FileList | null) {
+    if (!files?.length) return;
+    const lines: string[] = [];
+    let failed = 0;
+    for (const file of files) {
+      const name = `${Date.now().toString(36)}-${safeName(file.name) || 'image.png'}`;
+      try {
+        await writeFile(['public', 'uploads', name], file);
+        lines.push(`![${file.name.replace(/\.[^.]+$/, '')}](/uploads/${name})`);
+      } catch {
+        failed += 1;
+      }
+    }
+
+    if (lines.length > 0) {
+      mdEl.setRangeText(`\n${lines.join('\n\n')}\n`, mdEl.selectionStart, mdEl.selectionEnd, 'end');
+      mdEl.focus();
+      render();
+    }
+
+    if (failed > 0) {
+      setStatus(
+        `${failed} 张图片没能写入。先点「选择博客文件夹」再插图；或者直接用图床链接 ![](https://…) 贴进来。`,
+        'warn',
+      );
+    } else {
+      setStatus(`已插入 ${lines.length} 张图片，落在 public/uploads/ 下，构建后会跟着发布。`);
+    }
+  }
+
+  /* ---------- GitHub 发布 ---------- */
+  type PublishConfig = { owner: string; repo: string; branch: string; token: string };
+  const CONFIG_KEY = 'dashai.publish';
+
+  function readConfig(): PublishConfig {
+    const raw = localStorage.getItem(CONFIG_KEY);
+    return raw ? (JSON.parse(raw) as PublishConfig) : { owner: '', repo: '', branch: 'main', token: '' };
+  }
+
+  function fillConfig() {
+    const cfg = readConfig();
+    $<HTMLInputElement>('#g-owner').value = cfg.owner;
+    $<HTMLInputElement>('#g-repo').value = cfg.repo;
+    $<HTMLInputElement>('#g-branch').value = cfg.branch || 'main';
+    $<HTMLInputElement>('#g-token').value = cfg.token;
+  }
+
+  function saveConfig() {
+    const cfg: PublishConfig = {
+      owner: $<HTMLInputElement>('#g-owner').value.trim(),
+      repo: $<HTMLInputElement>('#g-repo').value.trim(),
+      branch: $<HTMLInputElement>('#g-branch').value.trim() || 'main',
+      token: $<HTMLInputElement>('#g-token').value.trim(),
+    };
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+    setStatus(
+      cfg.owner && cfg.repo && cfg.token
+        ? `设置已存：${cfg.owner}/${cfg.repo}@${cfg.branch}。`
+        : '设置已存，但还缺 owner / repo / token。',
+      cfg.owner && cfg.repo && cfg.token ? 'ok' : 'warn',
+    );
+  }
+
+  function toBase64(text: string): string {
+    const bytes = new TextEncoder().encode(text);
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary);
+  }
+
+  function ghHeaders(cfg: PublishConfig) {
+    return {
+      Authorization: `Bearer ${cfg.token}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    };
+  }
+
+  function ghApi(cfg: PublishConfig, tail: string) {
+    const owner = encodeURIComponent(cfg.owner);
+    const repo = encodeURIComponent(cfg.repo);
+    return `https://api.github.com/repos/${owner}/${repo}${tail}`;
+  }
+
+  function contentApi(cfg: PublishConfig, path: string) {
+    // 逐段编码，文件名里有中文或空格也不会把 URL 拼坏
+    return ghApi(cfg, `/contents/${path.split('/').map(encodeURIComponent).join('/')}`);
+  }
+
+  type Remote = { exists: false } | { exists: true; sha: string };
+
+  async function readRemote(cfg: PublishConfig, path: string): Promise<Remote> {
+    const res = await fetch(
+      `${contentApi(cfg, path)}?ref=${encodeURIComponent(cfg.branch)}`,
+      // no-store：API 响应会被浏览器缓存，缓存里的旧 sha 正是 409 的来源
+      { headers: ghHeaders(cfg), cache: 'no-store' },
+    );
+    if (res.status === 404) return { exists: false };
+    if (res.status === 401) throw new Error('Token 无效或已过期（401）。');
+    if (res.status === 403) {
+      throw new Error('Token 权限不够（403）：需要这个仓库的 contents: write。');
+    }
+    if (!res.ok) {
+      const detail = (await res.json().catch(() => ({}))) as { message?: string };
+      throw new Error(`读取远端文件失败：${res.status} ${detail.message ?? ''}`);
+    }
+    const data = (await res.json()) as { sha?: string };
+    return data.sha ? { exists: true, sha: data.sha } : { exists: false };
+  }
+
+  async function ensureBranch(cfg: PublishConfig) {
+    const res = await fetch(ghApi(cfg, `/branches/${encodeURIComponent(cfg.branch)}`), {
+      headers: ghHeaders(cfg),
+      cache: 'no-store',
+    });
+    if (res.ok) return;
+    if (res.status === 401) throw new Error('Token 无效或已过期（401）。');
+    if (res.status === 403) throw new Error('Token 权限不够（403），需要 contents: write。');
+    if (res.status === 404) {
+      const repoRes = await fetch(ghApi(cfg, ''), { headers: ghHeaders(cfg), cache: 'no-store' });
+      const info = repoRes.ok ? ((await repoRes.json()) as { default_branch?: string }) : null;
+      throw new Error(
+        `分支「${cfg.branch}」不存在${info?.default_branch ? `，这个仓库的默认分支是「${info.default_branch}」` : ''}。去「发布设置」把分支名改对。`,
+      );
+    }
+    throw new Error(`检查分支失败：${res.status}`);
+  }
+
+  /**
+   * 提交一个文件。409 / 422 都当“远端状态变了”处理：
+   * 优先用 GitHub 在报错里给出的当前 sha 重试，拿不到就重新读一次。
+   */
+  async function commitFile(cfg: PublishConfig, path: string, text: string, message: string) {
+    const api = contentApi(cfg, path);
+    const headers = ghHeaders(cfg);
+    let remote = await readRemote(cfg, path);
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const body: Record<string, unknown> = {
+        message,
+        content: toBase64(text),
+        branch: cfg.branch,
+      };
+      if (remote.exists) body.sha = remote.sha;
+
+      const res = await fetch(api, { method: 'PUT', headers, body: JSON.stringify(body) });
+      if (res.ok) {
+        return (await res.json()) as { commit: { html_url: string } };
+      }
+
+      const detail = (await res.json().catch(() => ({}))) as { message?: string };
+      const msg = detail.message ?? String(res.status);
+
+      if (res.status === 409 || res.status === 422) {
+        const reported = /is at ([0-9a-f]{40})/.exec(msg)?.[1];
+        remote = reported ? { exists: true, sha: reported } : await readRemote(cfg, path);
+        continue;
+      }
+      if (res.status === 401) throw new Error('Token 无效或已过期（401）。');
+      if (res.status === 403) throw new Error('Token 没有写权限（403），需要 contents: write。');
+      throw new Error(`${res.status} ${msg}`);
+    }
+
+    throw new Error('连续 3 次都冲突：这个文件正被别的工具改动，或者你在别处刚提交过。刷新页面再发一次。');
+  }
+
+  async function checkConnection() {
+    const cfg = readConfig();
+    if (!cfg.owner || !cfg.repo || !cfg.token) {
+      setStatus('先填 owner / repo / token。', 'warn');
+      return;
+    }
+    setStatus('正在检查……');
+    try {
+      await ensureBranch(cfg);
+      const slug = slugEl.value.trim() || defaultSlug();
+      const remote = await readRemote(cfg, `src/content/posts/${slug}.md`);
+      setStatus(
+        `连接正常：${cfg.owner}/${cfg.repo}@${cfg.branch}。${
+          remote.exists
+            ? `远端已有 src/content/posts/${slug}.md（sha ${remote.sha.slice(0, 7)}），发布时会覆盖它。`
+            : '远端还没有这个文件，发布会新建。'
+        }`,
+      );
+    } catch (error) {
+      setStatus(`检查失败：${(error as Error).message}`, 'err');
+    }
+  }
+
+  async function publishToGithub() {
+    const cfg = readConfig();
+    if (!cfg.owner || !cfg.repo || !cfg.token) {
+      setStatus('先在下面「发布设置」里填 owner / repo / token。', 'warn');
+      return;
+    }
+    const slug = slugEl.value.trim() || defaultSlug();
+    const path = `src/content/posts/${slug}.md`;
+
+    setStatus('正在提交……');
+    try {
+      await ensureBranch(cfg);
+      const result = await commitFile(cfg, path, fullMarkdown(), `post: ${slug}`);
+      setStatus(`已提交：${result.commit.html_url}。构建跑完（约 1 分钟）文章就上线。`);
+    } catch (error) {
+      setStatus(`发布失败：${(error as Error).message}`, 'err');
+    }
+  }
+
+  /* ---------- 按钮 ---------- */
+  document.querySelectorAll<HTMLButtonElement>('[data-act]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      // 防连点：同一个按钮并发提交正是 409（sha 冲突）的主要来源
+      if (btn.dataset.busy === '1') return;
+      btn.dataset.busy = '1';
+      btn.disabled = true;
+      try {
+        switch (btn.dataset.act) {
+        case 'paste': {
+          try {
+            const text = await navigator.clipboard.readText();
+            if (!text.trim()) {
+              setStatus('剪贴板是空的。', 'warn');
+              return;
+            }
+            const { body, fields } = parseFrontmatter(text);
+            mdEl.value = body.trimStart();
+            if (fields.title) titleEl.value = fields.title;
+            if (fields.description) descEl.value = fields.description;
+            if (fields.date) dateEl.value = fields.date;
+            if (fields.tags) tagsEl.value = fields.tags;
+            if (fields.draft) draftEl.checked = fields.draft === 'true';
+            render();
+            setStatus(fields.title ? `已导入《${fields.title}》。` : '已导入 Markdown。');
+          } catch {
+            setStatus('读不到剪贴板（浏览器要求手动授权或 HTTPS）：直接点正文框按 Ctrl+V 粘贴。', 'warn');
+          }
+          break;
+        }
+        case 'folder':
+          await pickFolder();
+          break;
+        case 'image':
+          imageInput.click();
+          break;
+        case 'copy-md':
+          setStatus((await copyText(fullMarkdown())) ? 'Markdown 已复制（含 frontmatter）。' : '复制失败。', 'ok');
+          break;
+        case 'download': {
+          const blob = new Blob([fullMarkdown()], { type: 'text/markdown;charset=utf-8' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `${slugEl.value.trim() || defaultSlug()}.md`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+          setStatus('已下载 .md，放进 src/content/posts/ 即可。');
+          break;
+        }
+        case 'copy-html':
+          await copyHtml();
+          break;
+        case 'save':
+          await saveToRepo();
+          break;
+        case 'publish':
+          await publishToGithub();
+          break;
+        case 'check':
+          await checkConnection();
+          break;
+        case 'save-settings':
+          saveConfig();
+          break;
+        case 'clear-settings':
+          localStorage.removeItem(CONFIG_KEY);
+          fillConfig();
+          setStatus('已清除发布设置。');
+          break;
+        }
+      } finally {
+        btn.dataset.busy = '0';
+        btn.disabled = false;
+      }
+    });
+  });
+
+  imageInput.addEventListener('change', () => {
+    void insertImages(imageInput.files);
+    imageInput.value = '';
+  });
+
+  /* ---------- 启动 ---------- */
+  async function init() {
+    fillConfig();
+    rootHandle = await loadHandle();
+    if (rootHandle && typeof rootHandle.queryPermission === 'function') {
+      const perm = await rootHandle.queryPermission({ mode: 'readwrite' });
+      setStatus(
+        perm === 'granted'
+          ? `已连接：${rootHandle.name}/，可以直接保存。`
+          : `上次连接的是 ${rootHandle.name}/，点「保存到仓库」时会再要一次写入权限。`,
+        perm === 'granted' ? 'ok' : 'warn',
+      );
+    }
+    render();
+  }
+
+  void init();
+</script>

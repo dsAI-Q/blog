@@ -1,0 +1,14 @@
+---
+import Base from '../layouts/Base.astro';
+import ResourceGroups from '../components/ResourceGroups.astro';
+import { INTRO, RESOURCE_GROUPS } from '../data/links';
+---
+
+<Base title="外链" description="网盘资源、平台邀请、学习渠道，都在这一页。">
+  <section class="welcome">
+    <h1>外链总览</h1>
+    <p class="lede">{INTRO.lead}</p>
+  </section>
+
+  <ResourceGroups groups={RESOURCE_GROUPS} />
+</Base>

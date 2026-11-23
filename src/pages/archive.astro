@@ -1,0 +1,33 @@
+---
+import Base from '../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+import { formatDate, groupByYear, isoDate, sortByDateDesc } from '../utils';
+
+const posts = sortByDateDesc(await getCollection('posts', ({ data }) => !data.draft));
+const years = groupByYear(posts);
+---
+
+<Base title="归档" description={`${posts.length} 篇文章，按年份排列。`}>
+  <section class="hero">
+    <h1>归档</h1>
+    <p>共 {posts.length} 篇，按年份从新到旧排列。</p>
+  </section>
+
+  {
+    years.map(([year, items]) => (
+      <section class="archive-year">
+        <h2>{year} 年 · {items.length} 篇</h2>
+        <ul>
+          {items.map((post) => (
+            <li>
+              <time datetime={isoDate(post.data.date)}>{formatDate(post.data.date)}</time>
+              <a href={`/posts/${post.id}/`}>{post.data.title}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+
+  {posts.length === 0 && <p class="muted">还没有文章。</p>}
+</Base>

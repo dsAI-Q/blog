@@ -1,0 +1,23 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { formatDate, isoDate } from '../utils';
+
+interface Props {
+  post: CollectionEntry<'posts'>;
+}
+
+const { post } = Astro.props;
+---
+
+<a class="post-card" href={`/posts/${post.id}/`}>
+  <h2>{post.data.title}</h2>
+  <p>{post.data.description}</p>
+  <div class="meta">
+    <time datetime={isoDate(post.data.date)}>{formatDate(post.data.date)}</time>
+    {
+      post.data.tags.length > 0 && (
+        <span>· {post.data.tags.map((tag) => `#${tag}`).join(' ')}</span>
+      )
+    }
+  </div>
+</a>
