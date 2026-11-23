@@ -8,7 +8,30 @@ import { SITE } from '../consts';
     <meta name="robots" content="noindex, nofollow" />
   </Fragment>
 
-  <section class="ed">
+  <section class="ed-shell" id="ed-shell">
+    <aside class="ed-posts" id="ed-posts" aria-label="文章列表">
+      <div class="ed-posts-head">
+        <span class="ed-posts-title">文章</span>
+        <span class="ed-posts-count" id="posts-count"></span>
+        <button
+          type="button"
+          class="ed-posts-toggle"
+          id="posts-toggle"
+          aria-expanded="true"
+          title="折叠 / 展开"
+          >«</button
+        >
+      </div>
+      <div class="ed-posts-body">
+        <div class="ed-posts-tools">
+          <button type="button" data-act="refresh-posts">刷新列表</button>
+        </div>
+        <p class="ed-posts-hint muted">拖动调整顺序 · 点标题载入 · 🗑 删除</p>
+        <ul class="ed-posts-list" id="posts-list"></ul>
+      </div>
+    </aside>
+
+    <section class="ed">
     <div class="ed-head">
       <h1>写文章</h1>
       <p class="muted">
@@ -114,14 +137,185 @@ import { SITE } from '../consts';
         <button type="button" data-act="clear-settings">清除</button>
       </div>
     </details>
+    </section>
   </section>
 
   <input id="file-image" type="file" accept="image/*" multiple hidden />
 </Base>
 
 <style>
-  .ed {
+  /* 左侧文章列表 + 右侧编辑器 */
+  .ed-shell {
+    display: grid;
+    grid-template-columns: 17rem minmax(0, 1fr);
+    gap: var(--space);
+    align-items: start;
     padding-block: clamp(1.5rem, 1rem + 2vw, 2.5rem) 4rem;
+  }
+
+  .ed-shell.is-collapsed {
+    grid-template-columns: 2.6rem minmax(0, 1fr);
+  }
+
+  @media (max-width: 62rem) {
+    .ed-shell,
+    .ed-shell.is-collapsed {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .ed-posts {
+    position: sticky;
+    inset-block-start: 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background-color: var(--surface);
+    overflow: hidden;
+  }
+
+  .ed-posts-head {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.7rem;
+    border-block-end: 1px solid var(--line);
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .ed-posts-count {
+    margin-inline-end: auto;
+    font-weight: 400;
+    color: var(--ink-2);
+  }
+
+  .ed-posts-toggle {
+    font: inherit;
+    line-height: 1;
+    padding: 0.2rem 0.42rem;
+    color: var(--ink-2);
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 0.35rem;
+    cursor: pointer;
+  }
+
+  .ed-posts-toggle:hover {
+    color: var(--ink-1);
+    border-color: var(--ink-2);
+  }
+
+  .ed-shell.is-collapsed .ed-posts-head {
+    padding: 0.4rem;
+    border-block-end: 0;
+  }
+
+  .ed-shell.is-collapsed .ed-posts-title,
+  .ed-shell.is-collapsed .ed-posts-count,
+  .ed-shell.is-collapsed .ed-posts-body {
+    display: none;
+  }
+
+  .ed-posts-tools {
+    padding: 0.5rem 0.7rem 0;
+  }
+
+  .ed-posts-tools button {
+    font: inherit;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    color: var(--ink-1);
+    background-color: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 0.35rem;
+    cursor: pointer;
+  }
+
+  .ed-posts-hint {
+    margin: 0.45rem 0 0.25rem;
+    padding-inline: 0.7rem;
+    font-size: 0.7rem;
+  }
+
+  .ed-posts-list {
+    display: grid;
+    gap: 0.15rem;
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0.4rem 0.6rem;
+    max-block-size: 58vh;
+    overflow-y: auto;
+  }
+
+  /* li 和按钮是 JS 动态生成的，必须用 :global 才能吃到样式 */
+  .ed-posts-list :global(li) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.32rem 0.35rem;
+    border: 1px solid transparent;
+    border-radius: 0.35rem;
+    font-size: 0.82rem;
+    cursor: grab;
+  }
+
+  .ed-posts-list :global(li:hover) {
+    background-color: var(--bg);
+    border-color: var(--line);
+  }
+
+  .ed-posts-list :global(li.is-dragging) {
+    opacity: 0.45;
+  }
+
+  .ed-posts-list :global(li.is-over) {
+    border-color: var(--brand);
+    background-color: var(--code-bg);
+  }
+
+  .ed-posts-list :global(.ed-posts-handle) {
+    color: var(--ink-2);
+    user-select: none;
+    font-size: 0.75rem;
+  }
+
+  .ed-posts-list :global(.ed-posts-title-btn) {
+    font: inherit;
+    text-align: start;
+    padding: 0;
+    color: var(--ink-1);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ed-posts-list :global(.ed-posts-title-btn:hover) {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .ed-posts-list :global(.ed-posts-del) {
+    font: inherit;
+    font-size: 0.75rem;
+    padding: 0.05rem 0.3rem;
+    color: var(--ink-2);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 0.3rem;
+    cursor: pointer;
+  }
+
+  .ed-posts-list :global(.ed-posts-del:hover) {
+    color: oklch(55% 0.18 25);
+    border-color: var(--line);
+  }
+
+  .ed {
+    padding-block: 0;
   }
 
   .ed-head h1 {
@@ -875,6 +1069,263 @@ import { SITE } from '../consts';
     }
   }
 
+  /* ---------- 左侧文章列表：载入 / 拖拽排序 / 删除 ---------- */
+  type RemotePost = {
+    path: string;
+    sha: string;
+    slug: string;
+    title: string;
+    date: string;
+    order: number;
+    pinned: boolean;
+    raw: string;
+  };
+
+  const shellEl = $<HTMLElement>('#ed-shell');
+  const listEl = $<HTMLElement>('#posts-list');
+  const countEl = $<HTMLElement>('#posts-count');
+  const toggleEl = $<HTMLButtonElement>('#posts-toggle');
+
+  let remotePosts: RemotePost[] = [];
+  let dragIndex = -1;
+
+  /** 和站内一致的排序：置顶 → 权重 → 日期 */
+  function sortLikeSite(items: RemotePost[]): RemotePost[] {
+    return [...items].sort((a, b) => {
+      const pin = Number(b.pinned) - Number(a.pinned);
+      if (pin !== 0) return pin;
+      if (b.order !== a.order) return b.order - a.order;
+      return b.date.localeCompare(a.date);
+    });
+  }
+
+  function b64decode(text: string): string {
+    const binary = atob(text.replace(/\n/g, ''));
+    return new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)));
+  }
+
+  async function fetchPostList() {
+    const cfg = readConfig();
+    if (!cfg.owner || !cfg.repo || !cfg.token) {
+      setStatus('文章列表需要先在「发布设置」里填 owner / repo / token。', 'warn');
+      return;
+    }
+    setStatus('正在读取文章列表……');
+    try {
+      const listRes = await fetch(
+        `${ghApi(cfg, '/contents/src/content/posts')}?ref=${encodeURIComponent(cfg.branch)}`,
+        { headers: ghHeaders(cfg), cache: 'no-store' },
+      );
+      if (!listRes.ok) throw new Error(`列出文件失败 ${listRes.status}`);
+
+      const files = (await listRes.json()) as { name: string; path: string; sha: string }[];
+      const mdFiles = files.filter((file) => file.name.endsWith('.md'));
+
+      const loaded = await Promise.all(
+        mdFiles.map(async (file): Promise<RemotePost> => {
+          const res = await fetch(
+            `${contentApi(cfg, file.path)}?ref=${encodeURIComponent(cfg.branch)}`,
+            { headers: ghHeaders(cfg), cache: 'no-store' },
+          );
+          const data = (await res.json()) as { content?: string; sha?: string };
+          const raw = data.content ? b64decode(data.content) : '';
+          const { fields } = parseFrontmatter(raw);
+          return {
+            path: file.path,
+            sha: data.sha ?? file.sha,
+            slug: file.name.replace(/\.md$/, ''),
+            title: fields.title || file.name,
+            date: fields.date || '',
+            order: Number(fields.order || 0),
+            pinned: fields.pinned === 'true',
+            raw,
+          };
+        }),
+      );
+
+      remotePosts = sortLikeSite(loaded);
+      renderPostList();
+      setStatus(`已载入 ${remotePosts.length} 篇文章。`);
+    } catch (error) {
+      setStatus(`读取列表失败：${(error as Error).message}`, 'err');
+    }
+  }
+
+  function renderPostList() {
+    countEl.textContent = `${remotePosts.length} 篇`;
+    listEl.innerHTML = '';
+
+    remotePosts.forEach((post, index) => {
+      const li = document.createElement('li');
+      li.dataset.index = String(index);
+      li.draggable = true;
+
+      const handle = document.createElement('span');
+      handle.className = 'ed-posts-handle';
+      handle.textContent = '⣿';
+
+      const titleBtn = document.createElement('button');
+      titleBtn.type = 'button';
+      titleBtn.className = 'ed-posts-title-btn';
+      titleBtn.textContent = post.title;
+      titleBtn.title = post.pinned ? `${post.slug}（置顶）` : post.slug;
+      titleBtn.addEventListener('click', async () => {
+        slugEl.value = post.slug;
+        await loadPost();
+      });
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'ed-posts-del';
+      del.textContent = '🗑';
+      del.title = '删除这篇';
+      del.addEventListener('click', () => void deletePost(post));
+
+      if (post.pinned) titleBtn.prepend('📌 ');
+      li.append(handle, titleBtn, del);
+      listEl.append(li);
+    });
+
+    bindDrag();
+  }
+
+  function bindDrag() {
+    for (const li of listEl.querySelectorAll<HTMLLIElement>('li')) {
+      li.addEventListener('dragstart', (event) => {
+        dragIndex = Number(li.dataset.index);
+        li.classList.add('is-dragging');
+        event.dataTransfer?.setData('text/plain', String(dragIndex));
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+      });
+
+      li.addEventListener('dragend', () => {
+        li.classList.remove('is-dragging');
+        listEl.querySelectorAll('.is-over').forEach((el) => el.classList.remove('is-over'));
+      });
+
+      li.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        li.classList.add('is-over');
+      });
+
+      li.addEventListener('dragleave', () => li.classList.remove('is-over'));
+
+      li.addEventListener('drop', (event) => {
+        event.preventDefault();
+        li.classList.remove('is-over');
+        const to = Number(li.dataset.index);
+        if (!Number.isNaN(to) && dragIndex >= 0 && to !== dragIndex) {
+          void reorderTo(dragIndex, to);
+        }
+        dragIndex = -1;
+      });
+    }
+  }
+
+  /** 拖动后写入递减权重，让列表顺序变成真实顺序 */
+  async function reorderTo(from: number, to: number) {
+    const next = [...remotePosts];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    remotePosts = next;
+    renderPostList();
+
+    const total = next.length;
+    const updates = next
+      .map((post, index) => ({ post, order: total - index }))
+      .filter(({ post, order }) => post.order !== order);
+
+    if (updates.length === 0) {
+      setStatus('顺序没有变化。');
+      return;
+    }
+
+    const cfg = readConfig();
+    setStatus(`正在保存顺序（${updates.length} 篇）……`);
+    try {
+      for (const { post, order } of updates) {
+        const raw = setOrderInFrontmatter(post.raw, order);
+        const res = await fetch(contentApi(cfg, post.path), {
+          method: 'PUT',
+          headers: ghHeaders(cfg),
+          body: JSON.stringify({
+            message: `order: ${post.slug} -> ${order}`,
+            content: toBase64(raw),
+            sha: post.sha,
+            branch: cfg.branch,
+          }),
+        });
+        if (!res.ok) {
+          const detail = (await res.json().catch(() => ({}))) as { message?: string };
+          throw new Error(`${post.slug}: ${res.status} ${detail.message ?? ''}`);
+        }
+        const data = (await res.json()) as { content?: { sha: string } };
+        post.sha = data.content?.sha ?? post.sha;
+        post.raw = raw;
+        post.order = order;
+      }
+
+      remotePosts = sortLikeSite(remotePosts);
+      renderPostList();
+      setStatus(`顺序已保存（${updates.length} 篇），1 分钟左右线上生效。`);
+    } catch (error) {
+      setStatus(`保存顺序失败：${(error as Error).message}`, 'err');
+      await fetchPostList();
+    }
+  }
+
+  function setOrderInFrontmatter(raw: string, order: number): string {
+    const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!match) return raw;
+    let frontmatter = match[1];
+    if (/^order:.*$/m.test(frontmatter)) {
+      frontmatter = frontmatter.replace(/^order:.*$/m, `order: ${order}`);
+    } else {
+      frontmatter += `\norder: ${order}`;
+    }
+    return raw.replace(match[0], `---\n${frontmatter}\n---`);
+  }
+
+  async function deletePost(post: RemotePost) {
+    if (!window.confirm(`删除《${post.title}》？\n\n会直接从仓库删掉这个文件，构建后线上也会消失，无法撤销。`)) {
+      return;
+    }
+    const cfg = readConfig();
+    setStatus(`正在删除 ${post.slug}……`);
+    try {
+      const res = await fetch(contentApi(cfg, post.path), {
+        method: 'DELETE',
+        headers: ghHeaders(cfg),
+        body: JSON.stringify({
+          message: `delete: ${post.slug}`,
+          sha: post.sha,
+          branch: cfg.branch,
+        }),
+      });
+      if (!res.ok) {
+        const detail = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(`${res.status} ${detail.message ?? ''}`);
+      }
+      await fetchPostList();
+      setStatus(`已删除 ${post.slug}，1 分钟左右线上消失。`);
+    } catch (error) {
+      setStatus(`删除失败：${(error as Error).message}`, 'err');
+    }
+  }
+
+  const COLLAPSE_KEY = 'dashai.postlist.collapsed';
+
+  function applyCollapse(collapsed: boolean) {
+    shellEl.classList.toggle('is-collapsed', collapsed);
+    toggleEl.setAttribute('aria-expanded', String(!collapsed));
+    toggleEl.textContent = collapsed ? '»' : '«';
+    localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+  }
+
+  toggleEl.addEventListener('click', () => {
+    applyCollapse(!shellEl.classList.contains('is-collapsed'));
+  });
+
   /* ---------- 按钮 ---------- */
   document.querySelectorAll<HTMLButtonElement>('[data-act]').forEach((btn) => {
     btn.addEventListener('click', async () => {
@@ -912,6 +1363,9 @@ import { SITE } from '../consts';
           break;
         case 'load':
           await loadPost();
+          break;
+        case 'refresh-posts':
+          await fetchPostList();
           break;
         case 'image':
           imageInput.click();
@@ -965,6 +1419,8 @@ import { SITE } from '../consts';
   /* ---------- 启动 ---------- */
   async function init() {
     fillConfig();
+    applyCollapse(localStorage.getItem(COLLAPSE_KEY) === '1');
+
     rootHandle = await loadHandle();
     if (rootHandle && typeof rootHandle.queryPermission === 'function') {
       const perm = await rootHandle.queryPermission({ mode: 'readwrite' });
@@ -975,6 +1431,13 @@ import { SITE } from '../consts';
         perm === 'granted' ? 'ok' : 'warn',
       );
     }
+
+    // 配好了 GitHub 凭据就顺便把左侧文章列表拉出来
+    const cfg = readConfig();
+    if (cfg.owner && cfg.repo && cfg.token) {
+      void fetchPostList();
+    }
+
     render();
   }
 
