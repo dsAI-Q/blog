@@ -184,11 +184,16 @@ function parseDate(html) {
 
 function slugFor(url, date, title) {
   const hash = createHash('sha1').update(url).digest('hex').slice(0, 6);
-  const ascii = title
+  // 中文标题里能提出来的英文词通常没意义（比如只剩 "0" "h3" "5"），
+  // 挑出长度 > 2 且有字母的词，凑不够就用日期 + 哈希。
+  const words = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  return ascii.length > 3 ? `wechat-${date}-${hash}-${ascii.slice(0, 40)}` : `wechat-${date}-${hash}`;
+    .split('-')
+    .filter((word) => /[a-z]/.test(word) && word.length > 2)
+    .slice(0, 5);
+  const ascii = words.join('-');
+  return ascii.length >= 6 ? `wechat-${date}-${hash}-${ascii.slice(0, 40)}` : `wechat-${date}-${hash}`;
 }
 
 async function downloadImage(src, dir, index) {
