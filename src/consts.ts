@@ -9,9 +9,9 @@ export const SITE = {
   lang: 'zh-CN',
   /** 页头与分享用的图标 */
   avatar: '/images/avatar.webp',
-  /** 首页顶部横幅 */
+  /** 首页顶部横幅：文件名带尺寸，换图时一起改名字（否则浏览器 7 天缓存看不到新图） */
   banner: {
-    src: '/images/banner.webp',
+    src: '/images/banner-2944x1024.webp',
     width: 2944,
     height: 1024,
     alt: '大圣Ai自习室：专注 Ai 知识、工具、资料分享',

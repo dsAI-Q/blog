@@ -18,8 +18,8 @@ OUT.mkdir(parents=True, exist_ok=True)
 def main() -> None:
     banner = Image.open(SRC_BANNER).convert("RGB")
 
-    # 首屏横幅：1568 宽够 2x，WebP 质量 82
-    banner.save(OUT / "banner.webp", "WEBP", quality=82, method=6)
+    # 首屏横幅：文件名带尺寸，换图时改名字才能绕过浏览器缓存
+    banner.save(OUT / "banner-2944x1024.webp", "WEBP", quality=82, method=6)
     # 社交分享 / 老浏览器兜底：1200 宽 JPEG
     og = banner.resize((1200, round(1200 * banner.height / banner.width)), Image.LANCZOS)
     og.save(OUT / "banner.jpg", "JPEG", quality=80, optimize=True, progressive=True)
@@ -37,7 +37,13 @@ def main() -> None:
     square.resize((180, 180), Image.LANCZOS).save(OUT / "icon-180.png", "PNG", optimize=True)
     square.resize((32, 32), Image.LANCZOS).save(OUT / "favicon-32.png", "PNG", optimize=True)
 
-    for name in ("banner.webp", "banner.jpg", "avatar.webp", "icon-180.png", "favicon-32.png"):
+    for name in (
+        "banner-2944x1024.webp",
+        "banner.jpg",
+        "avatar.webp",
+        "icon-180.png",
+        "favicon-32.png",
+    ):
         p = OUT / name
         print(f"{name:16} {Image.open(p).size}  {p.stat().st_size / 1024:.0f} KB")
 
