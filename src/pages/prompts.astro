@@ -1,14 +1,17 @@
 ---
 import Base from '../layouts/Base.astro';
+import PromptList from '../components/PromptList.astro';
 import { PROMPTS } from '../data/prompts';
 
-const CATEGORIES = ['图像', '视频', '通用'] as const;
-const KINDS = ['系统提示词', '提示词'] as const;
+const CATEGORIES = ['视频', '图像', '通用'] as const;
 
-const groups = CATEGORIES.map((category) => ({
-  category,
-  items: PROMPTS.filter((prompt) => prompt.category === category),
-})).filter((group) => group.items.length > 0);
+const count = (category: (typeof CATEGORIES)[number]) => PROMPTS.filter((prompt) => prompt.category === category).length;
+const of = (category: (typeof CATEGORIES)[number]) => PROMPTS.filter((prompt) => prompt.category === category);
+const hasAny = (category: (typeof CATEGORIES)[number]) => count(category) > 0;
+
+const video = of('视频');
+const image = of('图像');
+const universal = of('通用');
 
 const models = [...new Set(PROMPTS.map((prompt) => prompt.model))].map((model) => ({
   model,
@@ -33,16 +36,14 @@ const workflowCount = PROMPTS.filter((prompt) => prompt.source === 'workflow').l
 
       <nav class="prompt-filters" aria-label="分类筛选">
         <a href="#all">全部 {PROMPTS.length}</a>
-        {
-          groups.map((group) => (
-            <a href={`#${group.category}`}>
-              {group.category} {group.items.length}
-            </a>
-          ))
-        }
+        {CATEGORIES.filter(hasAny).map((category) => (
+          <a href={`#${category}`}>
+            {category} {count(category)}
+          </a>
+        ))}
         {
           models.map((item) => (
-            <a class="prompt-filter-model" href={`#all`} data-model={item.model}>
+            <a class="prompt-filter-model" href="#all" data-model={item.model}>
               {item.model} {item.count}
             </a>
           ))
@@ -51,54 +52,31 @@ const workflowCount = PROMPTS.filter((prompt) => prompt.source === 'workflow').l
     </section>
 
     <div id="all">
+      <div class="prompt-columns">
+        <section id="视频" class="prompt-column">
+          <h2 class="prompt-column-title">
+            AI 视频提示词库 <span class="prompt-column-count">{video.length} 条</span>
+          </h2>
+          <PromptList items={video} />
+        </section>
+
+        <section id="图像" class="prompt-column">
+          <h2 class="prompt-column-title">
+            AI 图像提示词库 <span class="prompt-column-count">{image.length} 条</span>
+          </h2>
+          <PromptList items={image} />
+        </section>
+      </div>
+
       {
-        groups.map((group) => (
-          <section id={group.category}>
-            <h2 class="section-title">
-              {group.category} · {group.items.length} 条
+        universal.length > 0 && (
+          <section id="通用" class="prompt-column prompt-column-wide">
+            <h2 class="prompt-column-title">
+              AI 通用提示词库 <span class="prompt-column-count">{universal.length} 条</span>
             </h2>
-
-            {KINDS.map((kind) => {
-              const list = group.items.filter((prompt) => prompt.kind === kind);
-              if (list.length === 0) return null;
-
-              return (
-                <>
-                  <h3 class="prompt-kind">
-                    {kind} · {list.length}
-                  </h3>
-                  <ul class="prompt-list">
-                    {list.map((prompt) => (
-                      <li>
-                        <details class="prompt" data-id={prompt.id}>
-                          <summary>
-                            <span class="prompt-head">
-                              <span class="prompt-title">{prompt.title}</span>
-                              {prompt.origin && <span class="prompt-origin">{prompt.origin}</span>}
-                            </span>
-                            <span class="prompt-tags">
-                              <span class="tag">{prompt.model}</span>
-                              <span class="tag">
-                                {prompt.source === 'workflow' ? '工作流' : '文档'}
-                              </span>
-                              <span class="prompt-len">{prompt.len} 字</span>
-                            </span>
-                          </summary>
-                          <div class="prompt-body">
-                            <pre data-loaded="0">展开后自动载入…</pre>
-                            <button type="button" class="prompt-copy" data-copy>
-                              复制全文
-                            </button>
-                          </div>
-                        </details>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              );
-            })}
+            <PromptList items={universal} />
           </section>
-        ))
+        )
       }
     </div>
 
@@ -129,10 +107,14 @@ const workflowCount = PROMPTS.filter((prompt) => prompt.source === 'workflow').l
     pre.dataset.loaded = '1';
   }
 
-  document.addEventListener('toggle', (event) => {
-    const details = event.target as HTMLDetailsElement;
-    if (details instanceof HTMLDetailsElement && details.open) void fill(details);
-  }, true);
+  document.addEventListener(
+    'toggle',
+    (event) => {
+      const details = event.target as HTMLDetailsElement;
+      if (details instanceof HTMLDetailsElement && details.open) void fill(details);
+    },
+    true,
+  );
 
   document.addEventListener('click', async (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-copy]');

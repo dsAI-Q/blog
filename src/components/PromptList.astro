@@ -1,0 +1,50 @@
+---
+import type { Prompt } from '../data/prompts';
+
+interface Props {
+  items: Prompt[];
+}
+
+const { items } = Astro.props;
+const KINDS = ['系统提示词', '提示词'] as const;
+---
+
+{
+  KINDS.map((kind) => {
+    const list = items.filter((prompt) => prompt.kind === kind);
+    if (list.length === 0) return null;
+
+    return (
+      <>
+        <h3 class="prompt-kind">
+          {kind} · {list.length}
+        </h3>
+        <ul class="prompt-list">
+          {list.map((prompt) => (
+            <li>
+              <details class="prompt" data-id={prompt.id}>
+                <summary>
+                  <span class="prompt-head">
+                    <span class="prompt-title">{prompt.title}</span>
+                    {prompt.origin && <span class="prompt-origin">{prompt.origin}</span>}
+                  </span>
+                  <span class="prompt-tags">
+                    <span class="tag">{prompt.model}</span>
+                    <span class="tag">{prompt.source === 'workflow' ? '工作流' : '文档'}</span>
+                    <span class="prompt-len">{prompt.len} 字</span>
+                  </span>
+                </summary>
+                <div class="prompt-body">
+                  <pre data-loaded="0">展开后自动载入…</pre>
+                  <button type="button" class="prompt-copy" data-copy>
+                    复制全文
+                  </button>
+                </div>
+              </details>
+            </li>
+          ))}
+        </ul>
+      </>
+    );
+  })
+}
