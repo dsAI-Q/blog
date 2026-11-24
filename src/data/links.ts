@@ -9,6 +9,8 @@ export type ResourceGroup = {
   key: string;
   title: string;
   note?: string;
+  /** 首页侧栏面板的强调色 */
+  tone?: 'sky' | 'amber' | 'violet';
   items: ResourceItem[];
 };
 
@@ -34,6 +36,7 @@ const STUDY: ResourceGroup = {
   key: 'study',
   title: 'Ai学习基地',
   note: '教程、直播和答疑',
+  tone: 'sky',
   items: [
     { label: 'YouTube 频道', href: 'https://youtu.be/p0uEXwDDAeI' },
     { label: 'B 站 UP 主', href: 'https://space.bilibili.com/2083795366' },
@@ -49,6 +52,7 @@ const PLATFORMS: ResourceGroup = {
   key: 'platforms',
   title: '平台福利',
   note: 'RH 双平台，注册送 1000 积分',
+  tone: 'amber',
   items: [
     {
       label: 'RunningHub 国内 CN 站',
@@ -69,6 +73,7 @@ const DRIVES: ResourceGroup = {
   key: 'drives',
   title: '网盘资源',
   note: '夸克网盘，长期更新',
+  tone: 'violet',
   items: [
     { label: '大圣AI整合包 + 解密工具', href: 'https://pan.quark.cn/s/c3844448249d' },
     { label: 'MiniMax-H3 整合包', href: 'https://pan.quark.cn/s/b2144e44781c' },

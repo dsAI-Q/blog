@@ -777,6 +777,183 @@
     font-size: 0.875rem;
   }
 
+  /* 首页两侧栏：立体卡片 + 悬浮按钮 */
+  .panel-side.tone-sky {
+    --tone: light-dark(oklch(60% 0.15 245), oklch(80% 0.11 240));
+  }
+
+  .panel-side.tone-amber {
+    --tone: light-dark(oklch(62% 0.13 68), oklch(84% 0.13 85));
+  }
+
+  .panel-side.tone-violet {
+    --tone: light-dark(oklch(58% 0.16 300), oklch(80% 0.11 300));
+  }
+
+  .panel-side {
+    --tone: var(--brand);
+    position: relative;
+    border: 1px solid color-mix(in oklab, var(--tone) 20%, var(--line));
+    border-radius: 1rem;
+    background: linear-gradient(
+      180deg,
+      var(--surface),
+      color-mix(in oklab, var(--surface) 90%, var(--bg))
+    );
+    box-shadow:
+      inset 0 1px 0 light-dark(rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.06)),
+      0 1px 2px rgb(0 0 0 / 0.05),
+      0 20px 34px -30px rgb(0 0 0 / 0.55);
+  }
+
+  .panel-side::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: 3px;
+    z-index: 1;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--tone),
+      transparent
+    );
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .panel-side .panel-head {
+    position: relative;
+    align-items: center;
+    padding: 0.9rem 0.95rem 0.8rem 2.45rem;
+    font-size: 0.95rem;
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--tone) 11%, var(--surface)),
+      transparent
+    );
+    border-block-end: 1px solid color-mix(in oklab, var(--tone) 18%, var(--line));
+  }
+
+  .panel-side .panel-head::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 1rem;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    inline-size: 0.9rem;
+    block-size: 0.9rem;
+    border-radius: 0.28rem;
+    background: linear-gradient(135deg, color-mix(in oklab, var(--tone) 12%, white), var(--tone));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.55),
+      0 3px 9px -3px var(--tone);
+  }
+
+  .panel-side .panel-list {
+    gap: 0.45rem;
+    padding: 0.75rem;
+  }
+
+  /* 侧栏链接：凸起的立体按钮，悬停抬起、发光 */
+  .panel-side .panel-list a,
+  .panel-side .panel-static {
+    position: relative;
+    padding: 0.6rem 1.85rem 0.6rem 0.8rem;
+    border: 1px solid color-mix(in oklab, var(--line) 80%, transparent);
+    border-radius: 0.7rem;
+    background: linear-gradient(
+      180deg,
+      light-dark(
+        color-mix(in oklab, white 65%, var(--surface)),
+        color-mix(in oklab, white 7%, var(--surface))
+      ),
+      var(--surface)
+    );
+    box-shadow:
+      inset 0 1px 0 light-dark(rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.07)),
+      0 1px 2px rgb(0 0 0 / 0.06),
+      0 8px 16px -14px rgb(0 0 0 / 0.5);
+    transition:
+      transform 0.16s ease,
+      box-shadow 0.16s ease,
+      border-color 0.16s ease;
+  }
+
+  .panel-side .panel-label {
+    font-weight: 600;
+  }
+
+  .panel-side .panel-list a::after {
+    content: '↗';
+    position: absolute;
+    inset-inline-end: 0.75rem;
+    inset-block-start: 0.6rem;
+    font-size: 0.72rem;
+    line-height: 1;
+    color: color-mix(in oklab, var(--tone) 75%, var(--ink-2));
+    opacity: 0.45;
+    transition:
+      opacity 0.16s ease,
+      translate 0.16s ease;
+  }
+
+  .panel-side .panel-list a:hover,
+  .panel-side .panel-list a:focus-visible {
+    background: linear-gradient(
+      180deg,
+      light-dark(
+        color-mix(in oklab, var(--tone) 8%, white),
+        color-mix(in oklab, var(--tone) 14%, var(--surface))
+      ),
+      var(--surface)
+    );
+    border-color: color-mix(in oklab, var(--tone) 60%, var(--line));
+    box-shadow:
+      inset 0 1px 0 light-dark(rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.1)),
+      0 4px 8px -6px rgb(0 0 0 / 0.25),
+      0 16px 26px -18px color-mix(in oklab, var(--tone) 55%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .panel-side .panel-list a:hover::after,
+  .panel-side .panel-list a:focus-visible::after {
+    opacity: 1;
+    translate: 2px -2px;
+  }
+
+  .panel-side .panel-list a:active {
+    transform: translateY(0);
+    box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.1);
+  }
+
+  /* 群号、公众号这类纯文字项：弱化，但数值可整段选中复制 */
+  .panel-side .panel-static {
+    padding-inline-end: 0.8rem;
+    border-style: dashed;
+    background: color-mix(in oklab, var(--bg) 65%, var(--surface));
+    box-shadow: none;
+  }
+
+  .panel-side .panel-static .panel-sub {
+    font-weight: 600;
+    color: var(--ink-1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-side .panel-list a,
+    .panel-side .panel-list a::after {
+      transition: none;
+    }
+
+    .panel-side .panel-list a:hover,
+    .panel-side .panel-list a:focus-visible,
+    .panel-side .panel-list a:active {
+      transform: none;
+    }
+  }
+
   .post-list-inset {
     padding-inline: 0.5rem;
   }
@@ -789,15 +966,35 @@
     border-block-end: 0;
   }
 
-  /* 首页右栏广告位 */
+  /* 首页右栏广告位：立体卡片 + 渐变主按钮 */
   .ad-card {
+    position: relative;
     display: grid;
-    gap: 0.6rem;
-    padding: 1rem 1rem 1.15rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background-color: var(--surface);
-    box-shadow: 0 14px 30px -26px rgb(0 0 0 / 0.7);
+    gap: 0.65rem;
+    padding: 1.15rem 1.1rem 1.25rem;
+    border: 1px solid color-mix(in oklab, var(--brand) 26%, var(--line));
+    border-radius: 1rem;
+    background:
+      radial-gradient(
+        120% 90% at 100% 0%,
+        color-mix(in oklab, var(--brand) 13%, transparent),
+        transparent 62%
+      ),
+      linear-gradient(180deg, var(--surface), color-mix(in oklab, var(--surface) 86%, var(--bg)));
+    box-shadow:
+      inset 0 1px 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.06)),
+      0 2px 4px rgb(0 0 0 / 0.05),
+      0 24px 40px -30px rgb(0 0 0 / 0.6);
+    overflow: hidden;
+  }
+
+  .ad-card::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: 3px;
+    background: linear-gradient(90deg, transparent, var(--brand), transparent);
   }
 
   .ad-badge {
@@ -806,14 +1003,17 @@
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.04em;
-    padding: 0.1rem 0.55rem;
+    padding: 0.18rem 0.6rem;
     border-radius: 999px;
-    background-color: light-dark(oklch(45% 0.12 72), oklch(84% 0.13 85));
-    color: light-dark(oklch(99% 0 0), oklch(20% 0.02 260));
+    background: linear-gradient(135deg, color-mix(in oklab, var(--btn-bg) 78%, white), var(--btn-bg));
+    color: var(--btn-ink);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      0 4px 10px -6px color-mix(in oklab, var(--btn-bg) 70%, transparent);
   }
 
   .ad-card h2 {
-    font-size: 1.05rem;
+    font-size: 1.12rem;
     line-height: 1.35;
   }
 
@@ -826,18 +1026,60 @@
 
   .ad-points {
     display: grid;
-    gap: 0.3rem;
+    gap: 0.35rem;
     margin: 0;
-    padding-inline-start: 1.1em;
+    padding: 0;
+    list-style: none;
     font-size: 0.84rem;
     color: var(--ink-2);
     line-height: 1.5;
   }
 
-  .ad-cta {
+  .ad-points li {
+    position: relative;
+    padding-inline-start: 1.05rem;
+  }
+
+  .ad-points li::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0.1rem;
+    inset-block-start: 0.55em;
+    inline-size: 0.35rem;
+    block-size: 0.35rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--brand) 75%, var(--ink-2));
+  }
+
+  .ad-card .ad-cta {
     justify-self: stretch;
     text-align: center;
-    margin-block-start: 0.15rem;
+    margin-block-start: 0.2rem;
+    padding: 0.7rem 1rem;
+    border-radius: 0.7rem;
+    background: linear-gradient(180deg, color-mix(in oklab, var(--btn-bg) 82%, white), var(--btn-bg));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.3),
+      0 6px 14px -8px color-mix(in oklab, var(--btn-bg) 70%, transparent),
+      0 14px 24px -18px rgb(0 0 0 / 0.5);
+    transition:
+      transform 0.16s ease,
+      box-shadow 0.16s ease,
+      filter 0.16s ease;
+  }
+
+  .ad-card .ad-cta:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      0 10px 20px -10px color-mix(in oklab, var(--btn-bg) 75%, transparent),
+      0 18px 30px -20px rgb(0 0 0 / 0.55);
+  }
+
+  .ad-card .ad-cta:active {
+    transform: translateY(0);
+    box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.18);
   }
 
   .ad-note {
@@ -847,10 +1089,40 @@
     text-align: center;
   }
 
-  /* 次要广告卡：弱化投影，避免两张卡抢视觉 */
+  /* 次要广告卡：保留设计感，但弱化一档，避免两张卡抢视觉 */
   .ad-card-quiet {
-    box-shadow: none;
-    background-color: var(--bg);
+    border-color: var(--line);
+    background:
+      radial-gradient(
+        120% 90% at 100% 0%,
+        color-mix(in oklab, var(--brand) 6%, transparent),
+        transparent 60%
+      ),
+      linear-gradient(180deg, var(--surface), color-mix(in oklab, var(--surface) 93%, var(--bg)));
+    box-shadow:
+      inset 0 1px 0 light-dark(rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.05)),
+      0 1px 2px rgb(0 0 0 / 0.04),
+      0 16px 28px -26px rgb(0 0 0 / 0.5);
+  }
+
+  .ad-card-quiet::before {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--brand) 45%, var(--line)),
+      transparent
+    );
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ad-card .ad-cta {
+      transition: none;
+    }
+
+    .ad-card .ad-cta:hover,
+    .ad-card .ad-cta:active {
+      transform: none;
+    }
   }
 
   .site-nav ul {

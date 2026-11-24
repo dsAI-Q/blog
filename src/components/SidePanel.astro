@@ -4,13 +4,14 @@ import type { ResourceItem } from '../data/links';
 interface Props {
   title: string;
   note?: string;
+  tone?: 'sky' | 'amber' | 'violet';
   items: ResourceItem[];
 }
 
-const { title, note, items } = Astro.props;
+const { title, note, tone, items } = Astro.props;
 ---
 
-<section class="panel">
+<section class:list={['panel', 'panel-side', tone && `tone-${tone}`]}>
   <h2 class="panel-head">
     {title}
     {note && <span class="panel-note">{note}</span>}
