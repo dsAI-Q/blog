@@ -574,6 +574,11 @@
     color: var(--ink-2);
   }
 
+  /* 中栏内的提示词入口：不要额外外边距 */
+  .promo-inline {
+    margin-block: 0;
+  }
+
   /* 首页：横幅 → 左中右三栏 */
   .home-grid {
     display: grid;
@@ -610,6 +615,13 @@
 
   .col-left,
   .col-right {
+    display: grid;
+    gap: var(--space);
+    align-content: start;
+  }
+
+  /* 中栏：提示词入口 + 文章列表纵向排列 */
+  .col-main {
     display: grid;
     gap: var(--space);
     align-content: start;
@@ -787,6 +799,12 @@
     font-size: 0.72rem;
     color: var(--ink-2);
     text-align: center;
+  }
+
+  /* 次要广告卡：弱化投影，避免两张卡抢视觉 */
+  .ad-card-quiet {
+    box-shadow: none;
+    background-color: var(--bg);
   }
 
   .site-nav ul {

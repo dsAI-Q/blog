@@ -4,7 +4,7 @@ import PostCard from '../components/PostCard.astro';
 import SidePanel from '../components/SidePanel.astro';
 import { SITE } from '../consts';
 import { GROUPS, INTRO } from '../data/links';
-import { AD } from '../data/ads';
+import { ADS } from '../data/ads';
 import { PROMPTS } from '../data/prompts';
 import { getCollection } from 'astro:content';
 import { sortPosts } from '../utils';
@@ -61,7 +61,19 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
       />
     </div>
 
-    <section class="col col-main panel">
+    <div class="col col-main">
+      <section class="promo promo-inline">
+        <div class="promo-text">
+          <h2>ComfyUI 提示词库</h2>
+          <p>
+            共 {promptCount} 条提示词生成器：图像 {imagePrompts} 条、视频 {videoPrompts} 条，
+            覆盖 MiniMax H3、LTX 2、Wan 2.2、Viggle 等。点开看全文，一键复制。
+          </p>
+        </div>
+        <a class="btn" href="/prompts/">进入提示词库 →</a>
+      </section>
+
+      <section class="panel">
       <h2 class="panel-head">
         最新文章
         <span class="panel-note">{posts.length} 篇</span>
@@ -91,29 +103,27 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
         )
       }
     </section>
+    </div>
 
     <aside class="col col-right">
-      <section class="ad-card">
-        <p class="ad-badge">{AD.badge}</p>
-        <h2>{AD.title}</h2>
-        <p class="ad-sub">{AD.subtitle}</p>
-        <ul class="ad-points">
-          {AD.points.map((point) => <li>{point}</li>)}
-        </ul>
-        <a class="btn ad-cta" href={AD.href}>{AD.ctaLabel}</a>
-        {AD.note && <p class="ad-note">{AD.note}</p>}
-      </section>
+      {
+        ADS.map((ad) => (
+          <section class:list={['ad-card', ad.quiet && 'ad-card-quiet']}>
+            <p class="ad-badge">{ad.badge}</p>
+            <h2>{ad.title}</h2>
+            <p class="ad-sub">{ad.subtitle}</p>
+            <ul class="ad-points">
+              {ad.points.map((point) => (
+                <li>{point}</li>
+              ))}
+            </ul>
+            <a class="btn ad-cta" href={ad.href}>
+              {ad.ctaLabel}
+            </a>
+            {ad.note && <p class="ad-note">{ad.note}</p>}
+          </section>
+        ))
+      }
     </aside>
   </div>
-
-  <section class="promo">
-    <div class="promo-text">
-      <h2>ComfyUI 提示词库</h2>
-      <p>
-        共 {promptCount} 条提示词生成器：图像 {imagePrompts} 条、视频 {videoPrompts} 条，
-        覆盖 MiniMax H3、LTX 2、Wan 2.2、Viggle 等。点开看全文，一键复制。
-      </p>
-    </div>
-    <a class="btn" href="/prompts/">进入提示词库 →</a>
-  </section>
 </Base>
