@@ -65,9 +65,8 @@ export default {
 
       const response = await env.ASSETS.fetch(request);
       const headers = new Headers(response.headers);
-      if (!headers.has('cache-control')) {
-        headers.set('Cache-Control', cacheControlFor(url.pathname));
-      }
+      // Pages 的静态资源自带 cache-control，必须无条件覆盖才能生效
+      headers.set('Cache-Control', cacheControlFor(url.pathname));
       return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
