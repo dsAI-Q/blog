@@ -1,0 +1,134 @@
+---
+import Base from '../layouts/Base.astro';
+import { PROMPTS } from '../data/prompts';
+
+const CATEGORIES = ['图像', '视频', '通用'] as const;
+const KINDS = ['系统提示词', '提示词'] as const;
+
+const groups = CATEGORIES.map((category) => ({
+  category,
+  items: PROMPTS.filter((prompt) => prompt.category === category),
+})).filter((group) => group.items.length > 0);
+
+const models = [...new Set(PROMPTS.map((prompt) => prompt.model))].map((model) => ({
+  model,
+  count: PROMPTS.filter((prompt) => prompt.model === model).length,
+}));
+---
+
+<Base
+  wide
+  title="ComfyUI 提示词"
+  description={`${PROMPTS.length} 条 ComfyUI 提示词生成器：图像与视频的模型、系统提示词，可直接复制使用。`}
+>
+  <div class="page-column">
+    <section class="welcome">
+      <h1>ComfyUI 提示词</h1>
+      <p class="lede">
+        共 {PROMPTS.length} 条，都是实际在用的提示词生成器：点开看全文，一键复制。
+        模型分布：
+        {
+          models.map((item, index) => (
+            <>
+              {index > 0 && ' · '}
+              {item.model} {item.count}
+            </>
+          ))
+        }
+      </p>
+
+      <nav class="prompt-filters" aria-label="分类筛选">
+        <a href="#all">全部 {PROMPTS.length}</a>
+        {
+          groups.map((group) => (
+            <a href={`#${group.category}`}>
+              {group.category} {group.items.length}
+            </a>
+          ))
+        }
+      </nav>
+    </section>
+
+    <div id="all">
+      {
+        groups.map((group) => (
+          <section id={group.category}>
+            <h2 class="section-title">
+              {group.category} · {group.items.length} 条
+            </h2>
+
+            {KINDS.map((kind) => {
+              const list = group.items.filter((prompt) => prompt.kind === kind);
+              if (list.length === 0) return null;
+
+              return (
+                <>
+                  <h3 class="prompt-kind">
+                    {kind} · {list.length}
+                  </h3>
+                  <ul class="prompt-list">
+                    {list.map((prompt) => (
+                      <li>
+                        <details class="prompt">
+                          <summary>
+                            <span class="prompt-title">{prompt.title}</span>
+                            <span class="prompt-tags">
+                              <span class="tag">{prompt.model}</span>
+                              <span class="tag">{prompt.kind}</span>
+                              <span class="prompt-len">{prompt.body.length} 字</span>
+                            </span>
+                          </summary>
+                          <div class="prompt-body">
+                            <pre>{prompt.body}</pre>
+                            <button type="button" class="prompt-copy" data-copy>
+                              复制全文
+                            </button>
+                          </div>
+                        </details>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              );
+            })}
+          </section>
+        ))
+      }
+    </div>
+
+    <p class="prompt-foot muted">
+      提示词原文来自本机整理，已按「图像 / 视频 → 模型」归类。有想补充或分类不对的，直接在博客留言。
+    </p>
+  </div>
+</Base>
+
+<script>
+  document.addEventListener('click', async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-copy]');
+    if (!button) return;
+
+    const pre = button.closest('.prompt-body')?.querySelector('pre');
+    const text = pre?.textContent ?? '';
+    if (!text) return;
+
+    const original = button.textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      button.textContent = '已复制 ✓';
+    } catch {
+      // 剪贴板不可用时退化成选中文本
+      const range = document.createRange();
+      if (pre) {
+        range.selectNodeContents(pre);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+      button.textContent = '已选中，按 Ctrl+C';
+    }
+
+    window.setTimeout(() => {
+      button.textContent = original;
+    }, 1800);
+  });
+</script>

@@ -32,7 +32,7 @@ export const INTRO = {
 /** 首页左侧栏：学习渠道 */
 const STUDY: ResourceGroup = {
   key: 'study',
-  title: 'ComfyUI 学习基地',
+  title: 'Ai学习基地',
   note: '教程、直播和答疑',
   items: [
     { label: 'YouTube 频道', href: 'https://youtu.be/p0uEXwDDAeI' },

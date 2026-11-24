@@ -4,11 +4,17 @@ import PostCard from '../components/PostCard.astro';
 import SidePanel from '../components/SidePanel.astro';
 import { SITE } from '../consts';
 import { GROUPS, INTRO } from '../data/links';
+import { AD } from '../data/ads';
+import { PROMPTS } from '../data/prompts';
 import { getCollection } from 'astro:content';
 import { sortPosts } from '../utils';
 
 const posts = sortPosts(await getCollection('posts', ({ data }) => !data.draft));
 const latest = posts.slice(0, 8);
+
+const promptCount = PROMPTS.length;
+const imagePrompts = PROMPTS.filter((prompt) => prompt.category === '图像').length;
+const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').length;
 ---
 
 <Base wide>
@@ -43,6 +49,16 @@ const latest = posts.slice(0, 8);
         note={GROUPS.study.note}
         items={GROUPS.study.items}
       />
+      <SidePanel
+        title={GROUPS.platforms.title}
+        note={GROUPS.platforms.note}
+        items={GROUPS.platforms.items}
+      />
+      <SidePanel
+        title={GROUPS.drives.title}
+        note={GROUPS.drives.note}
+        items={GROUPS.drives.items}
+      />
     </div>
 
     <section class="col col-main panel">
@@ -76,17 +92,28 @@ const latest = posts.slice(0, 8);
       }
     </section>
 
-    <div class="col col-right">
-      <SidePanel
-        title={GROUPS.platforms.title}
-        note={GROUPS.platforms.note}
-        items={GROUPS.platforms.items}
-      />
-      <SidePanel
-        title={GROUPS.drives.title}
-        note={GROUPS.drives.note}
-        items={GROUPS.drives.items}
-      />
-    </div>
+    <aside class="col col-right">
+      <section class="ad-card">
+        <p class="ad-badge">{AD.badge}</p>
+        <h2>{AD.title}</h2>
+        <p class="ad-sub">{AD.subtitle}</p>
+        <ul class="ad-points">
+          {AD.points.map((point) => <li>{point}</li>)}
+        </ul>
+        <a class="btn ad-cta" href={AD.href}>{AD.ctaLabel}</a>
+        {AD.note && <p class="ad-note">{AD.note}</p>}
+      </section>
+    </aside>
   </div>
+
+  <section class="promo">
+    <div class="promo-text">
+      <h2>ComfyUI 提示词库</h2>
+      <p>
+        共 {promptCount} 条提示词生成器：图像 {imagePrompts} 条、视频 {videoPrompts} 条，
+        覆盖 MiniMax H3、LTX 2、Wan 2.2、Viggle 等。点开看全文，一键复制。
+      </p>
+    </div>
+    <a class="btn" href="/prompts/">进入提示词库 →</a>
+  </section>
 </Base>

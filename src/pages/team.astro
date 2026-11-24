@@ -1,0 +1,69 @@
+---
+import Base from '../layouts/Base.astro';
+import { getEntry, render } from 'astro:content';
+
+const entry = await getEntry('pages', 'team');
+if (!entry) throw new Error('缺少 src/content/pages/team.md');
+
+const { Content } = await render(entry);
+---
+
+<Base
+  wide
+  title="加入团队指导"
+  description="入团费用、缴费流程、申请步骤与风险说明：39.9 元一个账号，终身免费使用团队空间里的工作流与应用。"
+>
+  <div class="page-column">
+    <section class="welcome">
+      <h1>
+        加入「大圣Ai自习室」团队
+        <span class="tag">39.9 元 / 账号</span>
+      </h1>
+      <p class="lede">
+        团队空间建在 RunningHub 上，加入后可调用、可下载团内工作流与应用，后续更新不再收费。
+        下面是完整说明：费用、缴费、申请步骤，以及必须提前知道的风险条款。
+      </p>
+      <div class="cta">
+        <a class="btn" href="/vip/">看一对一教学</a>
+        <a class="btn ghost" href="/links/">全部资源入口</a>
+      </div>
+    </section>
+
+    <article class="prose">
+      <Content />
+    </article>
+
+    <section class="card enroll">
+      <h2>先看这三条</h2>
+      <ol>
+        <li>团费 <strong>39.9 元 / 1 个账号</strong>，只提供团内应用与工作流的调用/下载，不含 AI 技术服务。</li>
+        <li>缴费后加微信 <code>qrock168</code>，发付款截图 + RunningHub 账号昵称，审批通过即入团。</li>
+        <li>已入团成员<strong>终身免费</strong>；严禁把团内工作流发布到云端或转卖，违者立即踢出且不退费。</li>
+      </ol>
+      <p class="muted">完整条款、收款码与申请链路上面的正文里都有，务必读完再缴费。</p>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .enroll {
+    margin-block: 2rem 4rem;
+  }
+
+  .enroll h2 {
+    font-size: 1.15rem;
+  }
+
+  .enroll ol {
+    margin-block: 0.75rem;
+    padding-inline-start: 1.3em;
+  }
+
+  .enroll li + li {
+    margin-block-start: 0.45rem;
+  }
+
+  .enroll p {
+    margin-block-start: 0.75rem;
+  }
+</style>
