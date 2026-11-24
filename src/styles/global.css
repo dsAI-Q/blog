@@ -484,10 +484,21 @@
     background-color: var(--bg);
   }
 
+  .prompt-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1 1 18rem;
+    min-inline-size: 0;
+  }
+
   .prompt-title {
     font-weight: 600;
-    flex: 1 1 14rem;
-    min-inline-size: 0;
+  }
+
+  .prompt-origin {
+    font-size: 0.74rem;
+    color: var(--ink-2);
   }
 
   .prompt-tags {

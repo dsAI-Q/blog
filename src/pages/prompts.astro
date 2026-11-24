@@ -72,7 +72,10 @@ const workflowCount = PROMPTS.filter((prompt) => prompt.source === 'workflow').l
                       <li>
                         <details class="prompt" data-id={prompt.id}>
                           <summary>
-                            <span class="prompt-title">{prompt.title}</span>
+                            <span class="prompt-head">
+                              <span class="prompt-title">{prompt.title}</span>
+                              {prompt.origin && <span class="prompt-origin">{prompt.origin}</span>}
+                            </span>
                             <span class="prompt-tags">
                               <span class="tag">{prompt.model}</span>
                               <span class="tag">
