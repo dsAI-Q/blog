@@ -43,7 +43,10 @@ function guardEdit(request, env) {
 
 function cacheControlFor(pathname) {
   if (pathname.startsWith('/_astro/')) return 'public, max-age=31536000, immutable';
-  if (pathname.startsWith('/images/')) return 'public, max-age=86400';
+  if (pathname.startsWith('/images/') || pathname.startsWith('/uploads/')) {
+    return 'public, max-age=86400';
+  }
+  if (pathname === '/prompts-data.json') return 'public, max-age=600';
   if (pathname === '/rss.xml') return 'public, max-age=600';
   if (pathname.startsWith('/sitemap')) return 'public, max-age=3600';
   return 'public, max-age=0, must-revalidate';

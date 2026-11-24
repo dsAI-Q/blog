@@ -14,27 +14,21 @@ const models = [...new Set(PROMPTS.map((prompt) => prompt.model))].map((model) =
   model,
   count: PROMPTS.filter((prompt) => prompt.model === model).length,
 }));
+
+const workflowCount = PROMPTS.filter((prompt) => prompt.source === 'workflow').length;
 ---
 
 <Base
   wide
   title="ComfyUI 提示词"
-  description={`${PROMPTS.length} 条 ComfyUI 提示词生成器：图像与视频的模型、系统提示词，可直接复制使用。`}
+  description={`${PROMPTS.length} 条 ComfyUI 提示词：图像与视频的模型、系统提示词，点开看全文、一键复制。`}
 >
   <div class="page-column">
     <section class="welcome">
       <h1>ComfyUI 提示词</h1>
       <p class="lede">
-        共 {PROMPTS.length} 条，都是实际在用的提示词生成器：点开看全文，一键复制。
-        模型分布：
-        {
-          models.map((item, index) => (
-            <>
-              {index > 0 && ' · '}
-              {item.model} {item.count}
-            </>
-          ))
-        }
+        共 {PROMPTS.length} 条，其中 {workflowCount} 条直接取自实际在用的 ComfyUI 工作流节点。
+        点开看全文，一键复制。
       </p>
 
       <nav class="prompt-filters" aria-label="分类筛选">
@@ -43,6 +37,13 @@ const models = [...new Set(PROMPTS.map((prompt) => prompt.model))].map((model) =
           groups.map((group) => (
             <a href={`#${group.category}`}>
               {group.category} {group.items.length}
+            </a>
+          ))
+        }
+        {
+          models.map((item) => (
+            <a class="prompt-filter-model" href={`#all`} data-model={item.model}>
+              {item.model} {item.count}
             </a>
           ))
         }
@@ -69,17 +70,19 @@ const models = [...new Set(PROMPTS.map((prompt) => prompt.model))].map((model) =
                   <ul class="prompt-list">
                     {list.map((prompt) => (
                       <li>
-                        <details class="prompt">
+                        <details class="prompt" data-id={prompt.id}>
                           <summary>
                             <span class="prompt-title">{prompt.title}</span>
                             <span class="prompt-tags">
                               <span class="tag">{prompt.model}</span>
-                              <span class="tag">{prompt.kind}</span>
-                              <span class="prompt-len">{prompt.body.length} 字</span>
+                              <span class="tag">
+                                {prompt.source === 'workflow' ? '工作流' : '文档'}
+                              </span>
+                              <span class="prompt-len">{prompt.len} 字</span>
                             </span>
                           </summary>
                           <div class="prompt-body">
-                            <pre>{prompt.body}</pre>
+                            <pre data-loaded="0">展开后自动载入…</pre>
                             <button type="button" class="prompt-copy" data-copy>
                               复制全文
                             </button>
@@ -97,26 +100,53 @@ const models = [...new Set(PROMPTS.map((prompt) => prompt.model))].map((model) =
     </div>
 
     <p class="prompt-foot muted">
-      提示词原文来自本机整理，已按「图像 / 视频 → 模型」归类。有想补充或分类不对的，直接在博客留言。
+      正文按需加载（一次载入全部，之后即刻可用）。「工作流」标签表示这条直接来自 ComfyUI 工作流里的节点原文。
     </p>
   </div>
 </Base>
 
 <script>
+  // 正文懒加载：首次展开任意条目时，抓一次 prompts-data.json 并缓存
+  let dataPromise: Promise<Record<string, string>> | null = null;
+
+  function loadData() {
+    dataPromise ??= fetch('/prompts-data.json', { cache: 'force-cache' })
+      .then((response) => response.json())
+      .catch(() => ({}));
+    return dataPromise;
+  }
+
+  async function fill(details: HTMLDetailsElement) {
+    const pre = details.querySelector('pre');
+    if (!pre || pre.dataset.loaded === '1') return;
+
+    const data = await loadData();
+    const text = data[details.dataset.id ?? ''] ?? '（这条正文没找到，可能已更新）';
+    pre.textContent = text;
+    pre.dataset.loaded = '1';
+  }
+
+  document.addEventListener('toggle', (event) => {
+    const details = event.target as HTMLDetailsElement;
+    if (details instanceof HTMLDetailsElement && details.open) void fill(details);
+  }, true);
+
   document.addEventListener('click', async (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-copy]');
     if (!button) return;
 
+    const details = button.closest('details');
+    if (details instanceof HTMLDetailsElement) await fill(details);
+
     const pre = button.closest('.prompt-body')?.querySelector('pre');
     const text = pre?.textContent ?? '';
-    if (!text) return;
+    if (!text || text.startsWith('展开后')) return;
 
     const original = button.textContent;
     try {
       await navigator.clipboard.writeText(text);
       button.textContent = '已复制 ✓';
     } catch {
-      // 剪贴板不可用时退化成选中文本
       const range = document.createRange();
       if (pre) {
         range.selectNodeContents(pre);
@@ -126,9 +156,8 @@ const models = [...new Set(PROMPTS.map((prompt) => prompt.model))].map((model) =
       }
       button.textContent = '已选中，按 Ctrl+C';
     }
-
     window.setTimeout(() => {
       button.textContent = original;
-    }, 1800);
+    }, 1600);
   });
 </script>

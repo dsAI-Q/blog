@@ -1,23 +1,23 @@
 /**
- * 把本地提示词文件汇总成 src/data/prompts.ts
+ * 生成提示词库数据：
+ *   src/data/prompts.ts        —— 元数据（标题/分类/模型/类型/字数），页面用
+ *   public/prompts-data.json   —— 正文，按 id 懒加载
  *
  * 来源：
- *  A. C:\Users\ASUS\Desktop\系统提示词 下的 .txt/.md（跳过 模板工作流 子目录）
- *  B. 白名单散落在 D/E 盘的 10 个文件
- * 明确排除：E:\闲鱼\杂项\NSFW-闲鱼清单（不读）
- *
- * 规则（与用户确认过）：
- *  - model 只允许：MiniMax H3（H3/MiniMax 合并）、LTX 2、Wan 2.2、bernini、Viggle、通用
- *  - category：图像 / 视频 / 通用
- *  - kind：系统提示词 / 提示词
+ *  A. C:\Users\ASUS\Desktop\系统提示词 下的 .txt/.md
+ *  B. D/E 盘白名单 10 个文件
+ *  C. ComfyUI 工作流 JSON 里的提示词节点（自动过滤 JSON 配置、按内容去重）
+ * 明确排除：E:\闲鱼\杂项\NSFW-闲鱼清单
  */
 
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 const DESKTOP = String.raw`C:\Users\ASUS\Desktop\系统提示词`;
-const OUT = path.resolve('src/data/prompts.ts');
+const WF_DIR = String.raw`E:\Comfyui\Comfyui-xiaozhuAI\ComfyUI\user\default\workflows`;
+const OUT_TS = path.resolve('src/data/prompts.ts');
+const OUT_JSON = path.resolve('public/prompts-data.json');
 
 const WHITELIST = [
   String.raw`D:\google drive\Google AI Studio\LTX-2 首尾帧提示词工程.txt`,
@@ -32,13 +32,13 @@ const WHITELIST = [
   String.raw`E:\闲鱼\杂项\万相文本指令v2\wan22提示词生成方法.txt`,
 ];
 
-// 文件名比正文可靠：先按名字判，名字没线索才看正文
 const NAME_IMAGE = /(图像|生图|文生图|海报|封面|角色设定|脸型|图片|修图|设定图|image|t2i)/i;
 const NAME_VIDEO = /(视频|分镜|生视频|运镜|武打|武戏|仙侠|监控|延长|一打多|白模|对白|二创|首尾帧|动作|viggle|refmod|video|t2v|i2v|ltx)/i;
 
+const sha = (text) => createHash('sha1').update(text).digest('hex');
+
 function detectModel(name, text) {
   const head = `${name}\n${text.slice(0, 4000)}`;
-  // 按顺序判断，先具体后笼统
   if (/wan\s*2\.?2|万相/i.test(head)) return 'Wan 2.2';
   if (/bernini/i.test(head)) return 'bernini';
   if (/viggle/i.test(head)) return 'Viggle';
@@ -50,7 +50,6 @@ function detectModel(name, text) {
 function detectCategory(name, text) {
   if (NAME_IMAGE.test(name)) return '图像';
   if (NAME_VIDEO.test(name)) return '视频';
-
   const head = text.slice(0, 3000);
   const image = /(文生图|生图|图像生成|海报|角色设定图)/.test(head);
   const video = /(文生视频|图生视频|生视频|分镜|运镜|首尾帧)/.test(head);
@@ -67,8 +66,8 @@ function detectKind(name, text) {
 
 function cleanTitle(name) {
   return name
-    .replace(/\.(txt|md)$/i, '')
-    .replace(/^🎬\s*/, '')
+    .replace(/\.(txt|md|json)$/i, '')
+    .replace(/^[🎬🐇🐷]\s*/u, '')
     .replace(/[_-]+/g, ' ')
     .replace(/\s*[（(]\d+[)）]\s*$/, '')
     .replace(/\s*[-－]\s*\d{4}-\d{2}-\d{2}\s*$/, '')
@@ -76,76 +75,187 @@ function cleanTitle(name) {
     .trim();
 }
 
-async function collect() {
+/* ---------- A + B：本地文件 ---------- */
+
+async function fromFiles() {
   const files = [];
-
-  // A. 桌面目录（只收根级 .txt/.md）
   for (const entry of await readdir(DESKTOP, { withFileTypes: true })) {
-    if (!entry.isFile()) continue;
-    if (!/\.(txt|md)$/i.test(entry.name)) continue;
-    files.push(path.join(DESKTOP, entry.name));
+    if (entry.isFile() && /\.(txt|md)$/i.test(entry.name)) files.push(path.join(DESKTOP, entry.name));
   }
-
-  // B. 白名单
   files.push(...WHITELIST);
-  return files;
+
+  const items = [];
+  for (const file of files) {
+    let text = '';
+    try {
+      text = (await readFile(file, 'utf8')).replace(/\r\n/g, '\n').trim();
+    } catch {
+      console.log(`跳过（读不到）：${path.basename(file)}`);
+      continue;
+    }
+    if (!text) continue;
+
+    const name = path.basename(file);
+    items.push({
+      source: 'file',
+      id: `p-${sha(file).slice(0, 8)}`,
+      title: cleanTitle(name),
+      name,
+      body: text,
+    });
+  }
+  return items;
 }
 
-const files = await collect();
-const items = [];
-const seen = new Set();
+/* ---------- C：工作流 JSON ---------- */
 
-for (const file of files) {
-  let text = '';
+const isConfigBlob = (text) => /^[\[{]/.test(text.trim()) || /^\s*data:/.test(text) || /^[A-Za-z0-9+/=]{200,}$/.test(text);
+
+function looksLikePrompt(text) {
+  const t = text.trim();
+  if (t.length < 80) return false;
+  if (isConfigBlob(t)) return false;
+  if (/[\u4e00-\u9fa5]/.test(t)) return true;
+  return /(you are|your role|task|instruction|prompt|describe|shot|camera|cinematic)/i.test(t.slice(0, 600));
+}
+
+function pickFromLiteGraph(json) {
+  const found = [];
+  for (const node of json.nodes ?? []) {
+    const values = Array.isArray(node.widgets_values) ? node.widgets_values : [];
+    for (const value of values) {
+      if (typeof value === 'string' && looksLikePrompt(value)) {
+        found.push({ nodeTitle: node.title ?? node.type ?? '', nodeType: node.type ?? '', text: value });
+      }
+    }
+  }
+  return found;
+}
+
+function pickFromApi(json) {
+  const found = [];
+  for (const [id, node] of Object.entries(json)) {
+    if (!node || typeof node !== 'object' || !node.inputs) continue;
+    for (const value of Object.values(node.inputs)) {
+      if (typeof value === 'string' && looksLikePrompt(value)) {
+        found.push({
+          nodeTitle: node._meta?.title ?? node.class_type ?? `node-${id}`,
+          nodeType: node.class_type ?? '',
+          text: value,
+        });
+      }
+    }
+  }
+  return found;
+}
+
+const GENERIC_NODE = /^(text|string|clip text encode|node-\d+|text \(task_prompt\)|.*widget.*|文本|提示词|正向|负向|正向提示词|负向提示词)$/i;
+
+// 成人向工作流整份跳过（与「NSFW-闲鱼清单」保持一致的处理原则）
+const ADULT_WORKFLOW = /(sex|eros|nsfw|porn|hentai|成人|色情|nude)/i;
+
+async function fromWorkflows() {
+  let names = [];
   try {
-    text = (await readFile(file, 'utf8')).replace(/\r\n/g, '\n').trim();
-  } catch (error) {
-    console.log(`跳过（读不到）：${path.basename(file)} — ${error.message}`);
-    continue;
-  }
-  if (!text) {
-    console.log(`跳过（空文件）：${path.basename(file)}`);
-    continue;
+    names = (await readdir(WF_DIR)).filter((name) => name.toLowerCase().endsWith('.json')).sort();
+  } catch {
+    console.log('工作流目录读不到，跳过 C 类来源');
+    return [];
   }
 
-  const name = path.basename(file);
-  const title = cleanTitle(name);
-  const id = `p-${createHash('sha1').update(file).digest('hex').slice(0, 8)}`;
+  const items = [];
+  const seen = new Set();
 
-  if (seen.has(id)) continue;
-  seen.add(id);
+  for (const name of names) {
+    if (ADULT_WORKFLOW.test(name)) {
+      console.log(`跳过成人向工作流：${name}`);
+      continue;
+    }
+    let json;
+    try {
+      json = JSON.parse(await readFile(path.join(WF_DIR, name), 'utf8'));
+    } catch {
+      continue;
+    }
+    const candidates = Array.isArray(json.nodes) ? pickFromLiteGraph(json) : pickFromApi(json);
+    const workflow = cleanTitle(name);
 
-  // 内容完全相同的重复文件只留一份（比如带 🎬 前缀的那对）
-  const bodyHash = createHash('sha1').update(text).digest('hex');
-  if (seen.has(bodyHash)) {
-    console.log(`跳过重复内容：${name}`);
-    continue;
+    for (const candidate of candidates) {
+      const text = candidate.text.trim();
+      const hash = sha(text);
+      if (seen.has(hash)) continue;
+      seen.add(hash);
+
+      const nodeTitle = String(candidate.nodeTitle ?? '').trim();
+      // 节点名太泛（「文本」「提示词」）就看不出内容，用工作流名兜底
+      const title =
+        nodeTitle && !GENERIC_NODE.test(nodeTitle) ? nodeTitle : `${workflow} · ${nodeTitle || candidate.nodeType || '节点'}`;
+
+      items.push({
+        source: 'workflow',
+        id: `w-${hash.slice(0, 8)}`,
+        title,
+        name: `${workflow} · ${nodeTitle || candidate.nodeType || '节点'}`,
+        body: text,
+      });
+    }
   }
-  seen.add(bodyHash);
-
-  items.push({
-    id,
-    title,
-    category: detectCategory(name, text),
-    model: detectModel(name, text),
-    kind: detectKind(name, text),
-    body: text,
-  });
+  return items;
 }
 
-const sortOrder = { 图像: 0, 视频: 1, 通用: 2 };
+/* ---------- 汇总 ---------- */
+
+const raw = [...(await fromFiles()), ...(await fromWorkflows())];
+
+// 同内容只留一份（文件优先于工作流）
+const seenBody = new Set();
+const items = [];
+for (const item of raw) {
+  const hash = sha(item.body);
+  if (seenBody.has(hash)) continue;
+  seenBody.add(hash);
+  items.push(item);
+}
+
+for (const item of items) {
+  const name = item.name;
+  item.category = detectCategory(name, item.body);
+  item.model = detectModel(name, item.body);
+  item.kind = detectKind(name, item.body);
+  item.len = item.body.length;
+}
+
+const catOrder = { 图像: 0, 视频: 1, 通用: 2 };
 const kindOrder = { 系统提示词: 0, 提示词: 1 };
 items.sort(
   (a, b) =>
-    sortOrder[a.category] - sortOrder[b.category] ||
+    catOrder[a.category] - catOrder[b.category] ||
     kindOrder[a.kind] - kindOrder[b.kind] ||
     a.title.localeCompare(b.title, 'zh-CN'),
 );
 
-const header = `// 由 scripts/import-prompts.mjs 自动生成，勿手改
+await mkdir(path.resolve('public'), { recursive: true });
+await writeFile(
+  OUT_JSON,
+  JSON.stringify(Object.fromEntries(items.map((item) => [item.id, item.body])), null, 0),
+  'utf8',
+);
+
+const meta = items.map(({ id, title, category, model, kind, len, source }) => ({
+  id,
+  title,
+  category,
+  model,
+  kind,
+  len,
+  source,
+}));
+
+const header = `// 由 scripts/import-prompts.mjs 自动生成，勿手改。正文见 public/prompts-data.json
 export type PromptCategory = '图像' | '视频' | '通用';
 export type PromptModel = 'MiniMax H3' | 'LTX 2' | 'Wan 2.2' | 'bernini' | 'Viggle' | '通用';
 export type PromptKind = '系统提示词' | '提示词';
+export type PromptSource = 'file' | 'workflow';
 
 export type Prompt = {
   id: string;
@@ -153,30 +263,29 @@ export type Prompt = {
   category: PromptCategory;
   model: PromptModel;
   kind: PromptKind;
-  body: string;
+  /** 正文字数（正文本身在 public/prompts-data.json 里懒加载） */
+  len: number;
+  source: PromptSource;
 };
 
 export const PROMPTS: Prompt[] = `;
 
-const body = JSON.stringify(items, null, 2)
+const body = JSON.stringify(meta, null, 2)
   .replace(/"id":/g, 'id:')
   .replace(/"title":/g, 'title:')
   .replace(/"category":/g, 'category:')
   .replace(/"model":/g, 'model:')
   .replace(/"kind":/g, 'kind:')
-  .replace(/"body":/g, 'body:');
+  .replace(/"len":/g, 'len:')
+  .replace(/"source":/g, 'source:');
 
-await writeFile(OUT, `${header}${body};\n`, 'utf8');
+await writeFile(OUT_TS, `${header}${body};\n`, 'utf8');
 
 const count = (key, value) => items.filter((item) => item[key] === value).length;
-console.log(`\n共 ${items.length} 条 -> ${OUT}`);
+console.log(`\n共 ${items.length} 条（文件 ${count('source', 'file')} / 工作流 ${count('source', 'workflow')}）`);
 console.log(`图像 ${count('category', '图像')} / 视频 ${count('category', '视频')} / 通用 ${count('category', '通用')}`);
 console.log(
   `模型：MiniMax H3 ${count('model', 'MiniMax H3')} / LTX 2 ${count('model', 'LTX 2')} / Wan 2.2 ${count('model', 'Wan 2.2')} / bernini ${count('model', 'bernini')} / Viggle ${count('model', 'Viggle')} / 通用 ${count('model', '通用')}`,
 );
 console.log(`类型：系统提示词 ${count('kind', '系统提示词')} / 提示词 ${count('kind', '提示词')}`);
-
-console.log('\n标题 / 分类 / 模型 / 类型 / 字数');
-for (const item of items) {
-  console.log(`${item.title.slice(0, 34).padEnd(36)} ${item.category} ${item.model.padEnd(12)} ${item.kind.padEnd(6)} ${item.body.length}`);
-}
+console.log(`正文合计 ${(items.reduce((sum, item) => sum + item.len, 0) / 1024).toFixed(0)} KB`);
