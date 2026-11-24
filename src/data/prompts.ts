@@ -250,6 +250,16 @@ export const PROMPTS: Prompt[] = [
     source: "workflow"
   },
   {
+    id: "w-3fe74bb0",
+    title: "参考首帧的人物",
+    origin: "LTX2.3全栈式短剧生成V8",
+    category: "视频",
+    model: "LTX 2",
+    kind: "提示词",
+    len: 554,
+    source: "workflow"
+  },
+  {
     id: "w-0986fa57",
     title: "触发词：zhuanchang",
     origin: "首尾帧音视频LTX2.3",
@@ -378,16 +388,6 @@ export const PROMPTS: Prompt[] = [
     kind: "提示词",
     len: 2433,
     source: "file"
-  },
-  {
-    id: "w-cd5f5adf",
-    title: "Dialogue_text\": \"银月：韩立哥哥",
-    origin: "LTX2.3全栈式短剧生成V8",
-    category: "视频",
-    model: "LTX 2",
-    kind: "提示词",
-    len: 558,
-    source: "workflow"
   },
   {
     id: "w-5d804dcc",

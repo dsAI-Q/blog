@@ -216,7 +216,11 @@ async function fromFiles() {
 
 /* ---------- C：工作流 JSON ---------- */
 
-const isConfigBlob = (text) => /^[\[{]/.test(text.trim()) || /^\s*data:/.test(text) || /^[A-Za-z0-9+/=]{200,}$/.test(text);
+const isConfigBlob = (text) =>
+  /^[\[{]/.test(text.trim()) ||
+  /^"[\w.-]+"\s*[:,]/.test(text.trim()) || // JSON 键值行
+  /^\s*data:/.test(text) ||
+  /^[A-Za-z0-9+/=]{200,}$/.test(text);
 
 function looksLikePrompt(text) {
   const t = text.trim();
