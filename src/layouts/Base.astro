@@ -43,6 +43,13 @@ const currentPath = Astro.url.pathname;
     <meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#14161a" media="(prefers-color-scheme: dark)" />
     <slot name="head" />
+    <!-- Cloudflare Web Analytics：免费、无 Cookie；token 在 Cloudflare 账号的 Web Analytics 页面可查 -->
+    <script
+      is:inline
+      type="module"
+      src="https://static.cloudflareinsights.com/beacon.min.js"
+      data-cf-beacon='{"token": "bc28d79be61948b98ea93b097e7a7776"}'
+    ></script>
   </head>
 
   <body>
