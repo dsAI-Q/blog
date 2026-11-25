@@ -1511,3 +1511,343 @@
     margin-block-start: 0.75rem;
   }
 }
+
+@layer components {
+  /* ---------- 留言与讨论区 ---------- */
+  .comments {
+    margin-block-start: 2.5rem;
+    padding-block-start: 1.5rem;
+    border-block-start: 1px solid var(--line);
+  }
+
+  .comments-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .comments-head h2 {
+    font-size: 1.15rem;
+  }
+
+  .comments-count {
+    font-size: 0.85rem;
+    color: var(--ink-2);
+  }
+
+  .comments-tip {
+    margin-block-start: 0.35rem;
+    font-size: 0.85rem;
+  }
+
+  .comment-list {
+    display: grid;
+    gap: 0.6rem;
+    margin-block: 1rem;
+  }
+
+  .comment {
+    padding: 0.8rem 0.95rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background-color: var(--surface);
+  }
+
+  .comment-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.75rem;
+    font-size: 0.82rem;
+    color: var(--ink-2);
+  }
+
+  .comment-name {
+    font-weight: 700;
+    color: var(--ink-1);
+  }
+
+  .comment-body {
+    margin-block-start: 0.4rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 0.93rem;
+  }
+
+  .comment-form {
+    display: grid;
+    gap: 0.55rem;
+    margin-block-start: 1rem;
+    padding: 0.95rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background-color: var(--surface);
+  }
+
+  .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+
+  .form-row-end {
+    justify-content: flex-end;
+  }
+
+  .comment-form input[type='text'],
+  .comment-form input:not([type]),
+  .comment-form textarea,
+  .admin-words input {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--line);
+    border-radius: 0.45rem;
+    background-color: var(--bg);
+    color: var(--ink-1);
+    min-inline-size: 0;
+  }
+
+  .form-row > input {
+    flex: 1 1 12rem;
+  }
+
+  .comment-form textarea {
+    inline-size: 100%;
+    resize: vertical;
+    line-height: 1.55;
+  }
+
+  .comment-form input:focus-visible,
+  .comment-form textarea:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 1px;
+  }
+
+  .hp {
+    position: absolute;
+    inset-inline-start: -9999px;
+    inline-size: 1px;
+    block-size: 1px;
+    opacity: 0;
+  }
+
+  .form-msg {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--ink-2);
+    min-block-size: 1.2em;
+  }
+
+  .post-views {
+    color: var(--ink-2);
+  }
+
+  /* ---------- /discuss/ ---------- */
+  .post-new {
+    margin-block-start: 1.5rem;
+  }
+
+  .post-list-panel {
+    margin-block-start: 1.25rem;
+  }
+
+  .thread-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .thread-list > li + li {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .thread-link {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.8rem 0.95rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .thread-link:hover {
+    background-color: var(--bg);
+  }
+
+  .thread-title {
+    font-weight: 600;
+    font-size: 0.98rem;
+  }
+
+  .thread-sub {
+    font-size: 0.8rem;
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+
+  .thread-back {
+    margin-block-start: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .thread-detail {
+    margin-block-start: 1rem;
+    padding: 1rem 1.1rem 1.2rem;
+  }
+
+  .thread-head h2 {
+    font-size: 1.3rem;
+  }
+
+  .thread-meta {
+    margin-block-start: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--ink-2);
+  }
+
+  .thread-body {
+    margin-block-start: 0.8rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .replies {
+    margin-block-start: 2rem;
+  }
+
+  /* ---------- /edit/discuss/ ---------- */
+  .admin-panel {
+    margin-block-start: 1.5rem;
+  }
+
+  .admin-panel .panel-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .admin-panel select {
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 0.4rem;
+    background-color: var(--bg);
+    color: var(--ink-1);
+  }
+
+  .admin-list {
+    display: grid;
+  }
+
+  .admin-entry {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    border-block-end: 1px solid var(--line);
+  }
+
+  .admin-entry:last-child {
+    border-block-end: 0;
+  }
+
+  .admin-entry-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--ink-2);
+  }
+
+  .admin-badge {
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .admin-badge-visible {
+    background-color: light-dark(oklch(92% 0.06 150), oklch(32% 0.06 150));
+    color: light-dark(oklch(38% 0.1 150), oklch(88% 0.08 150));
+  }
+
+  .admin-badge-pending {
+    background-color: light-dark(oklch(94% 0.08 80), oklch(34% 0.07 80));
+    color: light-dark(oklch(42% 0.12 60), oklch(90% 0.1 80));
+  }
+
+  .admin-badge-hidden {
+    background-color: var(--bg);
+    color: var(--ink-2);
+  }
+
+  .admin-kind {
+    font-weight: 600;
+  }
+
+  .admin-title {
+    font-weight: 600;
+  }
+
+  .admin-body {
+    font-size: 0.88rem;
+    color: var(--ink-2);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-block-size: 8rem;
+    overflow: auto;
+  }
+
+  .admin-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-block-start: 0.15rem;
+  }
+
+  .admin-actions .btn {
+    font-size: 0.78rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  .btn.danger {
+    color: light-dark(oklch(50% 0.17 25), oklch(80% 0.13 25));
+    border-color: light-dark(oklch(85% 0.08 25), oklch(40% 0.08 25));
+  }
+
+  .btn.danger:hover {
+    border-color: light-dark(oklch(60% 0.16 25), oklch(85% 0.13 25));
+  }
+
+  .admin-words {
+    padding: 0.9rem 1rem 1.1rem;
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .word-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .word-list li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    background-color: var(--bg);
+  }
+
+  .word-list .btn {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.5rem;
+  }
+}

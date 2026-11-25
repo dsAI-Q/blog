@@ -1,0 +1,225 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base wide title="讨论管理" description="讨论区管理后台">
+  <div class="page-column">
+    <section class="welcome">
+      <h1>讨论管理</h1>
+      <p class="lede">
+        删除、隐藏访客留言与帖子，管理屏蔽词。这个页面和接口都在 <code>/edit/</code> 的登录保护下。
+      </p>
+      <p><a href="/edit/">← 回到文章编辑器</a> · <a href="/discuss/">打开讨论区</a></p>
+    </section>
+
+    <section class="panel admin-panel">
+      <h2 class="panel-head">
+        内容
+        <span class="panel-note">
+          <select data-filter>
+            <option value="all">全部</option>
+            <option value="visible">显示中</option>
+            <option value="pending">待审核</option>
+            <option value="hidden">已隐藏</option>
+          </select>
+          <button type="button" class="btn ghost" data-refresh>刷新</button>
+        </span>
+      </h2>
+      <div class="admin-list" data-admin-list>
+        <p class="muted">加载中…</p>
+      </div>
+    </section>
+
+    <section class="panel admin-panel">
+      <h2 class="panel-head">屏蔽词</h2>
+      <div class="admin-words">
+        <form class="form-row" data-word-form>
+          <input name="word" maxlength="40" placeholder="新增屏蔽词" required />
+          <button type="submit" class="btn">添加</button>
+        </form>
+        <ul class="word-list" data-word-list></ul>
+        <p class="form-msg" data-word-msg role="status"></p>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<script>
+  {
+    const listEl = document.querySelector<HTMLElement>('[data-admin-list]');
+    const filterEl = document.querySelector<HTMLSelectElement>('[data-filter]');
+    const refreshEl = document.querySelector<HTMLButtonElement>('[data-refresh]');
+    const wordForm = document.querySelector<HTMLFormElement>('[data-word-form]');
+    const wordList = document.querySelector<HTMLElement>('[data-word-list]');
+    const wordMsg = document.querySelector<HTMLElement>('[data-word-msg]');
+
+    const fmt = (ts: number) => {
+      const d = new Date(ts * 1000);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    };
+
+    const kindLabel: Record<string, string> = { thread: '帖子', reply: '回复', comment: '文章留言' };
+
+    const loadList = async () => {
+      if (!listEl) return;
+      const status = filterEl?.value ?? 'all';
+      try {
+        const response = await fetch(`/edit/api/discuss/list?status=${status}&limit=100`, { cache: 'no-store' });
+        if (!response.ok) {
+          listEl.innerHTML = '<p class="muted">加载失败，先登录 <a href="/edit/">编辑器</a> 再回来。</p>';
+          return;
+        }
+        const data = (await response.json()) as {
+          entries?: {
+            id: number;
+            kind: string;
+            ref: string;
+            title: string;
+            nickname: string;
+            body: string;
+            created_at: number;
+            status: string;
+          }[];
+        };
+        const entries = data.entries ?? [];
+        listEl.textContent = '';
+        if (entries.length === 0) {
+          const p = document.createElement('p');
+          p.className = 'muted';
+          p.textContent = '没有内容。';
+          listEl.append(p);
+          return;
+        }
+
+        for (const entry of entries) {
+          const row = document.createElement('article');
+          row.className = 'admin-entry';
+          row.dataset.id = String(entry.id);
+
+          const head = document.createElement('div');
+          head.className = 'admin-entry-head';
+          const badge = document.createElement('span');
+          badge.className = `admin-badge admin-badge-${entry.status}`;
+          badge.textContent =
+            entry.status === 'visible' ? '显示中' : entry.status === 'pending' ? '待审核' : '已隐藏';
+          const kind = document.createElement('span');
+          kind.className = 'admin-kind';
+          kind.textContent = kindLabel[entry.kind] ?? entry.kind;
+          const meta = document.createElement('span');
+          meta.className = 'muted';
+          meta.textContent = `${entry.nickname} · ${fmt(entry.created_at)}${entry.ref ? ` · ${entry.ref}` : ''}`;
+          head.append(badge, kind, meta);
+
+          const title = document.createElement('p');
+          title.className = 'admin-title';
+          title.textContent = entry.kind === 'thread' ? entry.title : entry.title || '（无标题）';
+
+          const body = document.createElement('p');
+          body.className = 'admin-body';
+          body.textContent = entry.body;
+
+          const actions = document.createElement('div');
+          actions.className = 'admin-actions';
+          const mk = (label: string, action: string, cls = 'btn ghost') => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = cls;
+            button.dataset.action = action;
+            button.textContent = label;
+            return button;
+          };
+          actions.append(
+            mk(entry.status === 'visible' ? '隐藏' : '显示', entry.status === 'visible' ? 'hide' : 'show'),
+            mk('删除', 'delete', 'btn ghost danger'),
+          );
+
+          row.append(head, title, body, actions);
+          listEl.append(row);
+        }
+      } catch {
+        listEl.innerHTML = '<p class="muted">网络不好，没加载出来。</p>';
+      }
+    };
+
+    listEl?.addEventListener('click', async (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
+      if (!button) return;
+      const row = button.closest<HTMLElement>('.admin-entry');
+      const id = row?.dataset.id;
+      if (!id) return;
+
+      const action = button.dataset.action ?? '';
+      if (action === 'delete' && !confirm('删除后不可恢复，确定？')) return;
+
+      try {
+        const response = await fetch('/edit/api/discuss/moderate', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: Number(id), action }),
+        });
+        if (!response.ok) {
+          alert('操作失败');
+          return;
+        }
+        await loadList();
+      } catch {
+        alert('网络不好，稍后再试');
+      }
+    });
+
+    refreshEl?.addEventListener('click', () => void loadList());
+    filterEl?.addEventListener('change', () => void loadList());
+
+    const loadWords = async () => {
+      if (!wordList) return;
+      try {
+        const response = await fetch('/edit/api/discuss/words', { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = (await response.json()) as { words?: string[] };
+        wordList.textContent = '';
+        for (const word of data.words ?? []) {
+          const li = document.createElement('li');
+          const span = document.createElement('span');
+          span.textContent = word;
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'btn ghost danger';
+          remove.textContent = '移除';
+          remove.addEventListener('click', async () => {
+            await fetch('/edit/api/discuss/words', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ word, action: 'remove' }),
+            });
+            await loadWords();
+          });
+          li.append(span, remove);
+          wordList.append(li);
+        }
+      } catch {
+        // 忽略
+      }
+    };
+
+    wordForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = wordForm;
+      const data = new FormData(form);
+      const word = String(data.get('word') ?? '').trim();
+      if (!word) return;
+      const response = await fetch('/edit/api/discuss/words', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ word, action: 'add' }),
+      });
+      if (wordMsg) wordMsg.textContent = response.ok ? '已添加' : '添加失败';
+      if (response.ok) {
+        form.reset();
+        await loadWords();
+      }
+    });
+
+    void loadList();
+    void loadWords();
+  }
+</script>

@@ -1,0 +1,294 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="讨论区"
+  description="大圣Ai自习室的访客讨论区：聊 AI、ComfyUI、工作流和教程，匿名发帖，不用注册。"
+>
+  <div class="page-column">
+    <section class="welcome">
+      <h1>讨论区</h1>
+      <p class="lede">
+        聊 AI、ComfyUI、工作流和教程。匿名就能发帖，不用注册；发得太快会被暂时拦住，被屏蔽词命中的会先进审核。
+      </p>
+    </section>
+
+    <div id="discuss-home">
+      <section class="panel post-new">
+        <h2 class="panel-head">发个新帖</h2>
+        <form class="comment-form" data-thread-form>
+          <div class="form-row">
+            <input name="nickname" maxlength="24" placeholder="昵称（可不填）" autocomplete="nickname" />
+            <input name="title" maxlength="80" placeholder="标题，至少 4 个字" required />
+          </div>
+          <textarea name="body" rows="5" maxlength="4000" required placeholder="正文…"></textarea>
+          <input class="hp" type="text" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+          <div class="form-row form-row-end">
+            <button type="submit" class="btn">发布帖子</button>
+          </div>
+          <p class="form-msg" data-msg role="status"></p>
+        </form>
+      </section>
+
+      <section class="panel post-list-panel">
+        <h2 class="panel-head">
+          最新帖子
+          <span class="panel-note" data-thread-count></span>
+        </h2>
+        <ul class="thread-list" data-thread-list>
+          <li class="muted" data-loading>加载中…</li>
+        </ul>
+      </section>
+    </div>
+
+    <div id="discuss-thread" hidden>
+      <p class="thread-back"><a href="/discuss/">← 回到讨论区</a></p>
+      <article class="panel thread-detail">
+        <header class="thread-head">
+          <h2 data-thread-title></h2>
+          <p class="thread-meta">
+            <span data-thread-nick></span>
+            <time data-thread-time></time>
+          </p>
+        </header>
+        <div class="thread-body" data-thread-body></div>
+      </article>
+
+      <section class="replies">
+        <h2 class="section-title">回复 <span data-reply-count></span></h2>
+        <div class="comment-list" data-reply-list></div>
+
+        <form class="comment-form" data-reply-form>
+          <div class="form-row">
+            <input name="nickname" maxlength="24" placeholder="昵称（可不填）" autocomplete="nickname" />
+            <button type="submit" class="btn">发表回复</button>
+          </div>
+          <textarea name="body" rows="3" maxlength="2000" required placeholder="回复这个帖子…"></textarea>
+          <input class="hp" type="text" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+          <p class="form-msg" data-msg role="status"></p>
+        </form>
+      </section>
+    </div>
+
+    <p class="prompt-foot muted">讨论数据存在 Cloudflare D1，不进 GitHub 仓库。</p>
+  </div>
+</Base>
+
+<script>
+  {
+    const fmt = (ts: number) => {
+      const diff = (Date.now() - ts * 1000) / 1000;
+      if (diff < 60) return '刚刚';
+      if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
+      const d = new Date(ts * 1000);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const home = document.querySelector<HTMLElement>('#discuss-home');
+    const threadView = document.querySelector<HTMLElement>('#discuss-thread');
+    const list = document.querySelector<HTMLElement>('[data-thread-list]');
+    const countLabel = document.querySelector<HTMLElement>('[data-thread-count]');
+    const threadForm = document.querySelector<HTMLFormElement>('[data-thread-form]');
+    const replyForm = document.querySelector<HTMLFormElement>('[data-reply-form]');
+
+    const params = new URLSearchParams(location.search);
+    const threadId = Number.parseInt(params.get('id') ?? '', 10);
+
+    const el = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector);
+
+    /* ---------- 帖子列表 ---------- */
+    const loadThreads = async () => {
+      if (!list) return;
+      try {
+        const response = await fetch('/api/discuss/threads?limit=50', { cache: 'no-store' });
+        const data = (await response.json()) as {
+          threads?: { id: number; title: string; body: string; nickname: string; created_at: number; replies: number }[];
+          error?: string;
+        };
+        if (!response.ok) {
+          list.innerHTML = `<li class="muted">${data.error ?? '列表加载失败'}</li>`;
+          return;
+        }
+
+        const threads = data.threads ?? [];
+        if (countLabel) countLabel.textContent = `${threads.length} 帖`;
+        list.textContent = '';
+        if (threads.length === 0) {
+          const li = document.createElement('li');
+          li.className = 'muted';
+          li.textContent = '还没有帖子，发第一个吧。';
+          list.append(li);
+          return;
+        }
+
+        for (const thread of threads) {
+          const li = document.createElement('li');
+          li.className = 'thread-item';
+
+          const link = document.createElement('a');
+          link.href = `/discuss/?id=${thread.id}`;
+          link.className = 'thread-link';
+
+          const title = document.createElement('span');
+          title.className = 'thread-title';
+          title.textContent = thread.title;
+
+          const meta = document.createElement('span');
+          meta.className = 'thread-sub';
+          const excerpt = thread.body.replace(/\s+/g, ' ').slice(0, 60);
+          meta.textContent = `${thread.nickname} · ${fmt(thread.created_at)} · ${thread.replies} 回复${excerpt ? ` · ${excerpt}` : ''}`;
+
+          link.append(title, meta);
+          li.append(link);
+          list.append(li);
+        }
+      } catch {
+        if (list) list.innerHTML = '<li class="muted">网络不好，列表没加载出来。</li>';
+      }
+    };
+
+    /* ---------- 帖子详情 ---------- */
+    const loadThread = async (id: number) => {
+      if (!threadView) return;
+      try {
+        const response = await fetch(`/api/discuss/thread?id=${id}`, { cache: 'no-store' });
+        const data = (await response.json()) as {
+          thread?: { id: number; title: string; body: string; nickname: string; created_at: number };
+          replies?: { id: number; nickname: string; body: string; created_at: number }[];
+          error?: string;
+        };
+
+        if (!response.ok || !data.thread) {
+          threadView.hidden = false;
+          const title = el<HTMLElement>('[data-thread-title]');
+          if (title) title.textContent = data.error ?? '帖子打不开';
+          return;
+        }
+
+        home?.setAttribute('hidden', '');
+        threadView.hidden = false;
+
+        const title = el<HTMLElement>('[data-thread-title]');
+        const nick = el<HTMLElement>('[data-thread-nick]');
+        const time = el<HTMLElement>('[data-thread-time]');
+        const body = el<HTMLElement>('[data-thread-body]');
+        if (title) title.textContent = data.thread.title;
+        if (nick) nick.textContent = data.thread.nickname;
+        if (time) time.textContent = fmt(data.thread.created_at);
+        if (body) body.textContent = data.thread.body;
+
+        const replyList = el<HTMLElement>('[data-reply-list]');
+        const replyCount = el<HTMLElement>('[data-reply-count]');
+        const replies = data.replies ?? [];
+        if (replyCount) replyCount.textContent = `${replies.length} 条`;
+        if (replyList) {
+          replyList.textContent = '';
+          if (replies.length === 0) {
+            const p = document.createElement('p');
+            p.className = 'muted';
+            p.textContent = '还没有回复。';
+            replyList.append(p);
+          }
+          for (const reply of replies) {
+            const article = document.createElement('article');
+            article.className = 'comment';
+            const head = document.createElement('div');
+            head.className = 'comment-head';
+            const name = document.createElement('span');
+            name.className = 'comment-name';
+            name.textContent = reply.nickname;
+            const when = document.createElement('time');
+            when.textContent = fmt(reply.created_at);
+            head.append(name, when);
+            const text = document.createElement('p');
+            text.className = 'comment-body';
+            text.textContent = reply.body;
+            article.append(head, text);
+            replyList.append(article);
+          }
+        }
+
+        document.title = `${data.thread.title} · 讨论区`;
+      } catch {
+        threadView.hidden = false;
+      }
+    };
+
+    /* ---------- 发帖 ---------- */
+    const submit = async (
+      form: HTMLFormElement,
+      url: string,
+      payload: Record<string, unknown>,
+      onOk?: (result: { status?: string }) => void,
+    ) => {
+      const msg = form.querySelector<HTMLElement>('[data-msg]');
+      const button = form.querySelector<HTMLButtonElement>('button[type=submit]');
+      if (button) button.disabled = true;
+      if (msg) msg.textContent = '提交中…';
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = (await response.json()) as { error?: string; message?: string; status?: string; id?: number };
+        if (!response.ok) {
+          if (msg) msg.textContent = result.error ?? '提交失败，稍后再试。';
+          return;
+        }
+        if (msg) msg.textContent = result.message ?? '发布成功。';
+        form.reset();
+        onOk?.(result);
+      } catch {
+        if (msg) msg.textContent = '网络不好，稍后再试。';
+      } finally {
+        if (button) button.disabled = false;
+      }
+    };
+
+    threadForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = new FormData(threadForm);
+      const title = String(data.get('title') ?? '').trim();
+      const body = String(data.get('body') ?? '').trim();
+      if (title.length < 4) {
+        const msg = threadForm.querySelector<HTMLElement>('[data-msg]');
+        if (msg) msg.textContent = '标题至少 4 个字。';
+        return;
+      }
+      void submit(
+        threadForm,
+        '/api/discuss/thread',
+        { title, body, nickname: data.get('nickname'), hp: data.get('hp') },
+        (result) => {
+          if (result.status === 'visible' && result.id) {
+            location.href = `/discuss/?id=${result.id}`;
+          } else {
+            void loadThreads();
+          }
+        },
+      );
+    });
+
+    replyForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = new FormData(replyForm);
+      void submit(
+        replyForm,
+        '/api/discuss/reply',
+        { threadId, body: String(data.get('body') ?? '').trim(), nickname: data.get('nickname'), hp: data.get('hp') },
+        (result) => {
+          if (result.status === 'visible') void loadThread(threadId);
+        },
+      );
+    });
+
+    if (Number.isFinite(threadId) && threadId > 0) {
+      void loadThread(threadId);
+    } else {
+      void loadThreads();
+    }
+  }
+</script>

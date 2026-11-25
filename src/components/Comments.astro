@@ -1,0 +1,136 @@
+---
+interface Props {
+  slug: string;
+}
+
+const { slug } = Astro.props;
+---
+
+<section class="comments" id="comments" data-slug={slug}>
+  <div class="comments-head">
+    <h2>留言</h2>
+    <span class="comments-count" data-count></span>
+  </div>
+  <p class="comments-tip muted">匿名就能留言，不用注册。发得太快会被暂时拦住。</p>
+
+  <div class="comment-list" data-list>
+    <p class="muted" data-empty>还没有留言，来抢第一条。</p>
+  </div>
+
+  <form class="comment-form" data-form>
+    <div class="form-row">
+      <input name="nickname" maxlength="24" placeholder="昵称（可不填）" autocomplete="nickname" />
+      <button type="submit" class="btn">发表留言</button>
+    </div>
+    <textarea name="body" rows="3" maxlength="1200" required placeholder="说点什么…"></textarea>
+    <input class="hp" type="text" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+    <p class="form-msg" data-msg role="status"></p>
+  </form>
+</section>
+
+<script>
+  {
+    const section = document.querySelector<HTMLElement>('.comments[data-slug]');
+    if (section) {
+      const slug = section.dataset.slug ?? '';
+      const list = section.querySelector<HTMLElement>('[data-list]');
+      const form = section.querySelector<HTMLFormElement>('[data-form]');
+      const msg = section.querySelector<HTMLElement>('[data-msg]');
+      const count = section.querySelector<HTMLElement>('[data-count]');
+
+      const fmt = (ts: number) => {
+        const diff = (Date.now() - ts * 1000) / 1000;
+        if (diff < 60) return '刚刚';
+        if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
+        const d = new Date(ts * 1000);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      };
+
+      const item = (comment: { nickname: string; body: string; created_at: number }) => {
+        const el = document.createElement('article');
+        el.className = 'comment';
+
+        const head = document.createElement('div');
+        head.className = 'comment-head';
+        const name = document.createElement('span');
+        name.className = 'comment-name';
+        name.textContent = comment.nickname;
+        const time = document.createElement('time');
+        time.textContent = fmt(comment.created_at);
+        head.append(name, time);
+
+        const body = document.createElement('p');
+        body.className = 'comment-body';
+        body.textContent = comment.body;
+
+        el.append(head, body);
+        return el;
+      };
+
+      const load = async () => {
+        if (!list) return;
+        try {
+          const response = await fetch(`/api/discuss/comments?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
+          if (!response.ok) return;
+          const data = (await response.json()) as { comments?: Parameters<typeof item>[0][] };
+          const comments = data.comments ?? [];
+
+          list.textContent = '';
+          if (comments.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'muted';
+            empty.textContent = '还没有留言，来抢第一条。';
+            list.append(empty);
+          } else {
+            for (const comment of comments) list.append(item(comment));
+          }
+          if (count) count.textContent = `${comments.length} 条`;
+        } catch {
+          // 网络失败就保持原样
+        }
+      };
+
+      form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(form);
+        const body = String(data.get('body') ?? '').trim();
+        if (body.length < 2) {
+          if (msg) msg.textContent = '内容太短了。';
+          return;
+        }
+
+        const button = form.querySelector('button[type=submit]');
+        if (button instanceof HTMLButtonElement) button.disabled = true;
+        if (msg) msg.textContent = '提交中…';
+
+        try {
+          const response = await fetch('/api/discuss/comment', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              slug,
+              nickname: data.get('nickname'),
+              body,
+              hp: data.get('hp'),
+            }),
+          });
+          const result = (await response.json()) as { error?: string; message?: string; status?: string };
+          if (!response.ok) {
+            if (msg) msg.textContent = result.error ?? '提交失败，稍后再试。';
+          } else {
+            if (msg) msg.textContent = result.message ?? '发布成功。';
+            form.reset();
+            if (result.status === 'visible') await load();
+          }
+        } catch {
+          if (msg) msg.textContent = '网络不好，稍后再试。';
+        } finally {
+          if (button instanceof HTMLButtonElement) button.disabled = false;
+        }
+      });
+
+      void load();
+    }
+  }
+</script>
