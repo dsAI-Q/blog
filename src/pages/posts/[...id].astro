@@ -60,22 +60,63 @@ const { Content } = await render(post);
   {
     const label = document.querySelector<HTMLElement>('[data-views-slug]');
     const slug = label?.dataset.viewsSlug;
+
+    const show = (views?: number) => {
+      if (label && views) {
+        label.textContent = `· ${views} 次阅读`;
+        label.hidden = false;
+      }
+    };
+
     if (label && slug) {
-      fetch('/api/views', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ slug }),
-      })
-        .then((response) => (response.ok ? response.json() : null))
-        .then((data: { views?: number } | null) => {
-          if (data?.views) {
-            label.textContent = `· ${data.views} 次阅读`;
-            label.hidden = false;
-          }
+      // 访客 ID：同一浏览器 24 小时内只算一次阅读，换设备/清缓存才会重新计
+      let visitor = '';
+      try {
+        visitor = localStorage.getItem('dsh.vid') ?? '';
+        if (!visitor) {
+          visitor =
+            typeof crypto.randomUUID === 'function'
+              ? crypto.randomUUID().replace(/-/g, '')
+              : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+          localStorage.setItem('dsh.vid', visitor);
+        }
+      } catch {
+        visitor = '';
+      }
+
+      const seenKey = `dsh.viewed.${slug}`;
+      let counted = false;
+      try {
+        const last = Number(localStorage.getItem(seenKey) ?? '0');
+        counted = Date.now() - last < 86400000;
+      } catch {
+        counted = false;
+      }
+
+      if (counted) {
+        fetch(`/api/views?slugs=${encodeURIComponent(slug)}`)
+          .then((response) => (response.ok ? response.json() : null))
+          .then((data: { views?: Record<string, number> } | null) => show(data?.views?.[slug]))
+          .catch(() => {});
+      } else {
+        fetch('/api/views', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ slug, visitor }),
         })
-        .catch(() => {
-          // 统计失败不影响阅读
-        });
+          .then((response) => (response.ok ? response.json() : null))
+          .then((data: { views?: number } | null) => {
+            show(data?.views);
+            try {
+              localStorage.setItem(seenKey, String(Date.now()));
+            } catch {
+              // 忽略隐私模式下的写入失败
+            }
+          })
+          .catch(() => {
+            // 统计失败不影响阅读
+          });
+      }
     }
   }
 </script>

@@ -237,9 +237,12 @@ async function bumpView(request, env) {
   const slug = clean(payload.slug ?? '', 120).replace(/[^\w-]/g, '');
   if (!slug) return json({ error: '参数不对' }, 400);
 
+  // 优先用浏览器生成的访客 ID 去重（IP 会因 IPv4/IPv6 切换而变化，计数会虚高）
+  const visitor = clean(payload.visitor ?? '', 64).replace(/[^\w-]/g, '');
   const hash = await ipHash(request, env);
+  const key = visitor.length >= 8 ? `v:${visitor}` : hash;
   const t = nowSec();
-  const hit = await env.DB.prepare('SELECT ts FROM view_hits WHERE slug = ? AND ip_hash = ?').bind(slug, hash).first();
+  const hit = await env.DB.prepare('SELECT ts FROM view_hits WHERE slug = ? AND ip_hash = ?').bind(slug, key).first();
 
   if (!hit || t - hit.ts >= 86400) {
     await env.DB.prepare(
@@ -250,7 +253,7 @@ async function bumpView(request, env) {
     await env.DB.prepare(
       'INSERT INTO view_hits (slug, ip_hash, ts) VALUES (?, ?, ?) ON CONFLICT(slug, ip_hash) DO UPDATE SET ts = excluded.ts',
     )
-      .bind(slug, hash, t)
+      .bind(slug, key, t)
       .run();
   }
 
