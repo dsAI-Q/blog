@@ -184,15 +184,43 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
       };
 
       const onPointerMove = (event: PointerEvent) => {
+        lastRealMove = performance.now();
         if (!canvas) return;
         canvas.dispatchEvent(
           new MouseEvent('mousemove', { clientX: event.clientX, clientY: event.clientY, bubbles: true }),
         );
       };
       const onPointerDown = (event: PointerEvent) => {
+        lastRealMove = performance.now();
         if (!canvas) return;
         canvas.dispatchEvent(
           new MouseEvent('mousedown', { clientX: event.clientX, clientY: event.clientY, bubbles: true }),
+        );
+      };
+
+      // 没有鼠标或鼠标不动时：虚拟指针在底部缓慢来回移动，让烟连续飘出，而不是定时一喷一喷
+      let lastRealMove = performance.now();
+      let lastDrift = 0;
+      let driftTime = 0;
+      let driftRaf = 0;
+
+      const drift = () => {
+        driftRaf = requestAnimationFrame(drift);
+        if (!canvas || document.hidden) return;
+        const now = performance.now();
+        if (now - lastRealMove < 1800) return; // 真的在动鼠标时不插手
+        if (now - lastDrift < 100) return;
+        lastDrift = now;
+        driftTime += 0.1;
+
+        const x = 0.5 + 0.42 * Math.sin(driftTime * 0.9);
+        const y = 0.95 + 0.01 * Math.sin(driftTime * 0.6);
+        canvas.dispatchEvent(
+          new MouseEvent('mousemove', {
+            clientX: x * window.innerWidth,
+            clientY: y * window.innerHeight,
+            bubbles: true,
+          }),
         );
       };
 
@@ -208,18 +236,17 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
           document.body.append(canvas);
 
           module.default(canvas, {
-            IMMEDIATE: true,
-            AUTO: true,
-            INTERVAL: 3800,
+            IMMEDIATE: false,
+            AUTO: false,
             SIM_RESOLUTION: 128,
             DYE_RESOLUTION: 1024,
-            DENSITY_DISSIPATION: 0.9,
+            DENSITY_DISSIPATION: 0.8,
             VELOCITY_DISSIPATION: 0.25,
             PRESSURE: 0.8,
             PRESSURE_ITERATIONS: 20,
             CURL: 30,
-            SPLAT_RADIUS: 0.25,
-            SPLAT_FORCE: 6000,
+            SPLAT_RADIUS: 0.16,
+            SPLAT_FORCE: 4200,
             SHADING: true,
             COLORFUL: true,
             COLOR_UPDATE_SPEED: 10,
@@ -230,6 +257,7 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
 
           window.addEventListener('pointermove', onPointerMove, { passive: true });
           window.addEventListener('pointerdown', onPointerDown, { passive: true });
+          driftRaf = requestAnimationFrame(drift);
           started = true;
         } catch {
           teardown();
@@ -239,6 +267,10 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
       };
 
       function teardown() {
+        if (driftRaf) {
+          cancelAnimationFrame(driftRaf);
+          driftRaf = 0;
+        }
         if (canvas) {
           window.removeEventListener('pointermove', onPointerMove);
           window.removeEventListener('pointerdown', onPointerDown);
