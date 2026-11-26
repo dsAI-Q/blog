@@ -36,12 +36,12 @@ export interface BannerFluidHandle {
 
 const SIM_RESOLUTION = 160;
 const DYE_RESOLUTION = 720;
-const DYE_MAX_DIMENSION = 1024;
+const DYE_MAX_DIMENSION = 1536;
 const PRESSURE_ITERATIONS = 18;
 const CURL = 20;
 const VELOCITY_DISSIPATION = 0.9;
 const DENSITY_DISSIPATION = 0.035;
-const SPLAT_RADIUS = 0.02;
+const SPLAT_RADIUS = 0.03;
 const SPLAT_FORCE = 1800;
 function hsv(h, s, v) { const i = Math.floor(h / 60) % 6; const f = h / 60 - Math.floor(h / 60); const p = v * (1 - s); const q = v * (1 - f * s); const t = v * (1 - (1 - f) * s); return [ [v,t,p],[q,v,p],[p,v,t],[p,q,v],[t,p,v],[v,p,q] ][i]; }
 
@@ -225,15 +225,22 @@ in vec2 vUv;
 out vec4 fragColor;
 uniform sampler2D uTexture;
 uniform vec2 texelSize;
+
+// 手写双线性：不依赖硬件线性过滤，避免放大成方块
+vec3 sampleBilinear (vec2 uv) {
+  vec2 size = 1.0 / texelSize;
+  vec2 p = uv * size - 0.5;
+  vec2 f = fract(p);
+  vec2 base = (floor(p) + 0.5) * texelSize;
+  vec3 c00 = texture(uTexture, base).rgb;
+  vec3 c10 = texture(uTexture, base + vec2(texelSize.x, 0.0)).rgb;
+  vec3 c01 = texture(uTexture, base + vec2(0.0, texelSize.y)).rgb;
+  vec3 c11 = texture(uTexture, base + vec2(texelSize.x, texelSize.y)).rgb;
+  return mix(mix(c00, c10, f.x), mix(c01, c11, f.x), f.y);
+}
+
 void main () {
-  // 4 点均值代替硬件双线性（这台机器上 RGBA16F 线性过滤不生效）
-  vec2 ts = texelSize * 0.5;
-  vec3 c =
-    texture(uTexture, vUv + vec2(-ts.x, -ts.y)).rgb +
-    texture(uTexture, vUv + vec2(ts.x, -ts.y)).rgb +
-    texture(uTexture, vUv + vec2(-ts.x, ts.y)).rgb +
-    texture(uTexture, vUv + vec2(ts.x, ts.y)).rgb;
-  c *= 0.25;
+  vec3 c = sampleBilinear(vUv);
   float alpha = clamp(max(c.r, max(c.g, c.b)) * 1.1, 0.0, 0.8);
   fragColor = vec4(c * alpha, alpha);
 }`;
@@ -298,6 +305,13 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
   if (!gl) throw new Error('WebGL2 unavailable');
   if (!gl.getExtension('EXT_color_buffer_float')) throw new Error('float render targets unavailable');
 
+  // 这台机器上 RGBA16F 的硬件线性过滤不可用，会退化成方块像素；
+  // 有 OES_texture_float_linear 时优先用 RGBA32F + LINEAR，否则用 16F + 着色器里手写双线性。
+  const floatLinear = Boolean(gl.getExtension('OES_texture_float_linear'));
+  const RT_FORMAT = floatLinear ? gl.RGBA32F : gl.RGBA16F;
+  const RT_TYPE = floatLinear ? gl.FLOAT : gl.HALF_FLOAT;
+  const RT_FILTER = floatLinear ? gl.LINEAR : gl.NEAREST;
+
   const programs = {
     advection: createProgram(gl, VERT, ADVECTION),
     divergence: createProgram(gl, VERT, DIVERGENCE),
@@ -329,11 +343,11 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     const texture = gl!.createTexture();
     if (!texture) throw new Error('createTexture failed');
     gl!.bindTexture(gl!.TEXTURE_2D, texture);
-    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MIN_FILTER, gl!.NEAREST);
-    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MAG_FILTER, gl!.NEAREST);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MIN_FILTER, RT_FILTER);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MAG_FILTER, RT_FILTER);
     gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_S, gl!.CLAMP_TO_EDGE);
     gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_T, gl!.CLAMP_TO_EDGE);
-    gl!.texImage2D(gl!.TEXTURE_2D, 0, gl!.RGBA16F, width, height, 0, gl!.RGBA, gl!.HALF_FLOAT, null);
+    gl!.texImage2D(gl!.TEXTURE_2D, 0, RT_FORMAT, width, height, 0, gl!.RGBA, RT_TYPE, null);
 
     const fbo = gl!.createFramebuffer();
     if (!fbo) throw new Error('createFramebuffer failed');
@@ -520,6 +534,19 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     }
   }
 
+  let lastAmbient = 0;
+
+  // 空闲时也自己飘：每隔几秒随机喷一团，像参考站那样一直有烟
+  function ambient(now: number) {
+    if (now - lastAmbient < 2600) return;
+    lastAmbient = now;
+    const x = Math.random();
+    const y = Math.random();
+    const angle = Math.random() * Math.PI * 2;
+    const force = 40 + Math.random() * 90;
+    splat(x, y, Math.cos(angle) * force, Math.sin(angle) * force, randomDye(1.1));
+  }
+
   function frame(now: number) {
     if (!running) return;
     try {
@@ -533,6 +560,7 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
         for (const s of splats) splat(s.x, s.y, s.dx, s.dy, s.color);
       }
 
+      ambient(now);
       step(dt);
       render();
       raf = requestAnimationFrame(frame);
