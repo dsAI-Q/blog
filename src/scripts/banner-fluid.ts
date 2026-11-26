@@ -245,6 +245,23 @@ void main () {
   fragColor = vec4(c * alpha, alpha);
 }`;
 
+const BLUR = `#version 300 es
+precision highp float;
+precision highp sampler2D;
+in vec2 vUv;
+in vec2 vL;
+in vec2 vR;
+in vec2 vT;
+in vec2 vB;
+out vec4 fragColor;
+uniform sampler2D uTexture;
+uniform float strength;
+void main () {
+  vec4 c = texture(uTexture, vUv);
+  vec4 avg = (texture(uTexture, vL) + texture(uTexture, vR) + texture(uTexture, vT) + texture(uTexture, vB)) * 0.25;
+  fragColor = mix(c, avg, strength);
+}`;
+
 function compileShader(gl: GL, type: number, source: string): WebGLShader {
   const shader = gl.createShader(type);
   if (!shader) throw new Error('createShader failed');
@@ -322,6 +339,7 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     clear: createProgram(gl, VERT, CLEAR),
     splat: createProgram(gl, VERT, SPLAT),
     display: createProgram(gl, VERT, DISPLAY),
+    blur: createProgram(gl, VERT, BLUR),
   };
 
   // 全屏四边形
@@ -508,6 +526,16 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     gl!.uniform1f(programs.advection.uniforms.dissipation, DENSITY_DISSIPATION);
     blit(dye.write);
     dye.swap();
+
+    // 染料模糊：把高频碎点揉成烟团
+    for (let pass = 0; pass < 2; pass++) {
+      gl!.useProgram(programs.blur.program);
+      gl!.uniform2f(programs.blur.uniforms.texelSize, dye.texelSizeX, dye.texelSizeY);
+      gl!.uniform1i(programs.blur.uniforms.uTexture, attach(dye.read.texture, 0));
+      gl!.uniform1f(programs.blur.uniforms.strength, 0.5);
+      blit(dye.write);
+      dye.swap();
+    }
   }
 
   function render() {
