@@ -131,7 +131,151 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
     </aside>
   </div>
 
-
+  <button type="button" class="page-fluid-toggle" data-fluid-toggle aria-pressed="true" hidden>
+    关闭背景动效
+  </button>
 </Base>
+
+<script>
+  {
+    // 首页整页背景流体：用 Pavel Dobryakov 的成熟实现（MIT，webgl-fluid）
+    const KEY = 'dsh.fluid';
+    const toggle = document.querySelector<HTMLButtonElement>('[data-fluid-toggle]');
+
+    if (toggle) {
+      const wide = window.matchMedia('(min-width: 62rem)');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const hasWebgl2 = (() => {
+        try {
+          return Boolean(document.createElement('canvas').getContext('webgl2'));
+        } catch {
+          return false;
+        }
+      })();
+
+      let userOn = true;
+      try {
+        userOn = localStorage.getItem(KEY) !== 'off';
+      } catch {
+        userOn = true;
+      }
+
+      let canvas: HTMLCanvasElement | null = null;
+      let loading = false;
+      let started = false;
+
+      const supported = () => hasWebgl2 && wide.matches;
+      const shouldRun = () => userOn && supported() && !reduce.matches && !document.hidden;
+
+      const syncLabel = () => {
+        toggle.textContent = userOn ? '关闭背景动效' : '开启背景动效';
+        toggle.setAttribute('aria-pressed', String(userOn));
+        toggle.hidden = !supported();
+      };
+
+      const forward = (event: MouseEvent) => {
+        canvas?.dispatchEvent(
+          new MouseEvent(event.type === 'pointermove' ? 'mousemove' : event.type === 'pointerdown' ? 'mousedown' : event.type, {
+            clientX: event.clientX,
+            clientY: event.clientY,
+            bubbles: true,
+          }),
+        );
+      };
+
+      const onPointerMove = (event: PointerEvent) => {
+        if (!canvas) return;
+        canvas.dispatchEvent(
+          new MouseEvent('mousemove', { clientX: event.clientX, clientY: event.clientY, bubbles: true }),
+        );
+      };
+      const onPointerDown = (event: PointerEvent) => {
+        if (!canvas) return;
+        canvas.dispatchEvent(
+          new MouseEvent('mousedown', { clientX: event.clientX, clientY: event.clientY, bubbles: true }),
+        );
+      };
+
+      const ensure = async () => {
+        if (started || loading || !userOn) return;
+        loading = true;
+        try {
+          const module = await import('../scripts/webgl-fluid.mjs');
+          if (!userOn) return;
+          canvas = document.createElement('canvas');
+          canvas.className = 'page-fluid-canvas';
+          canvas.setAttribute('aria-hidden', 'true');
+          document.body.append(canvas);
+
+          module.default(canvas, {
+            IMMEDIATE: true,
+            AUTO: true,
+            INTERVAL: 3800,
+            SIM_RESOLUTION: 128,
+            DYE_RESOLUTION: 1024,
+            DENSITY_DISSIPATION: 0.9,
+            VELOCITY_DISSIPATION: 0.25,
+            PRESSURE: 0.8,
+            PRESSURE_ITERATIONS: 20,
+            CURL: 30,
+            SPLAT_RADIUS: 0.25,
+            SPLAT_FORCE: 6000,
+            SHADING: true,
+            COLORFUL: true,
+            COLOR_UPDATE_SPEED: 10,
+            TRANSPARENT: true,
+            BLOOM: false,
+            BACK_COLOR: { r: 0, g: 0, b: 0 },
+          });
+
+          window.addEventListener('pointermove', onPointerMove, { passive: true });
+          window.addEventListener('pointerdown', onPointerDown, { passive: true });
+          started = true;
+        } catch {
+          teardown();
+        } finally {
+          loading = false;
+        }
+      };
+
+      function teardown() {
+        if (canvas) {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerdown', onPointerDown);
+          canvas.remove();
+          canvas = null;
+        }
+        started = false;
+      }
+
+      const sync = async () => {
+        syncLabel();
+        if (!supported() || !userOn) {
+          teardown();
+          return;
+        }
+        if (shouldRun()) await ensure();
+      };
+
+      toggle.addEventListener('click', () => {
+        userOn = !userOn;
+        try {
+          localStorage.setItem(KEY, userOn ? 'on' : 'off');
+        } catch {
+          // 忽略隐私模式
+        }
+        if (!userOn) teardown();
+        void sync();
+      });
+
+      document.addEventListener('visibilitychange', () => void sync());
+      wide.addEventListener('change', () => void sync());
+      reduce.addEventListener('change', () => void sync());
+
+      syncLabel();
+      void sync();
+    }
+  }
+</script>
 
 
