@@ -28,6 +28,13 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
       decoding="async"
     />
 
+    <button
+      type="button"
+      class="banner-fluid-toggle"
+      data-fluid-toggle
+      aria-pressed="false"
+      hidden>开启动效</button>
+
     <div class="banner-caption">
       <p class="banner-note">
         微信 <span class="copyable">{INTRO.contact.wechat}</span> &amp; QQ <span
@@ -130,3 +137,114 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
     </aside>
   </div>
 </Base>
+
+<script>
+  {
+    // 横幅的鼠标烟雾：桌面才开、可关、后台/离屏暂停、不支持就静默降级
+    const KEY = 'dsh.fluid';
+    const banner = document.querySelector<HTMLElement>('.banner');
+    const toggle = document.querySelector<HTMLButtonElement>('[data-fluid-toggle]');
+
+    if (banner && toggle) {
+      const wide = window.matchMedia('(min-width: 62rem)');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const webgl2 = (() => {
+        try {
+          return Boolean(document.createElement('canvas').getContext('webgl2'));
+        } catch {
+          return false;
+        }
+      })();
+
+      // 试验功能：默认关闭，想看的自己点开，状态记在本机
+      let userOn = false;
+      try {
+        userOn = localStorage.getItem(KEY) === 'on';
+      } catch {
+        userOn = false;
+      }
+
+      let handle: { pause(): void; resume(): void; destroy(): void } | null = null;
+      let canvas: HTMLCanvasElement | null = null;
+      let loading = false;
+      let inView = true;
+
+      const supported = () => webgl2 && wide.matches;
+      const shouldRun = () => userOn && supported() && !reduce.matches && inView && !document.hidden;
+
+      const syncLabel = () => {
+        toggle.textContent = userOn ? '关闭动效' : '开启动效';
+        toggle.setAttribute('aria-pressed', String(userOn));
+        toggle.hidden = !supported();
+      };
+
+      const teardown = () => {
+        handle?.destroy();
+        handle = null;
+        canvas?.remove();
+        canvas = null;
+      };
+
+      const ensure = async () => {
+        if (handle || loading || !userOn) return;
+        loading = true;
+        try {
+          const module = await import('../scripts/banner-fluid');
+          if (!userOn) return;
+          canvas = document.createElement('canvas');
+          canvas.className = 'banner-fluid-canvas';
+          canvas.setAttribute('aria-hidden', 'true');
+          banner.prepend(canvas);
+          handle = module.createBannerFluid(canvas, banner);
+        } catch {
+          teardown();
+        } finally {
+          loading = false;
+        }
+      };
+
+      const sync = async () => {
+        syncLabel();
+        if (!supported() || !userOn) {
+          teardown();
+          return;
+        }
+        if (shouldRun()) {
+          await ensure();
+          handle?.resume();
+        } else {
+          handle?.pause();
+        }
+      };
+
+      toggle.addEventListener('click', () => {
+        userOn = !userOn;
+        try {
+          localStorage.setItem(KEY, userOn ? 'on' : 'off');
+        } catch {
+          // 隐私模式下忽略
+        }
+        if (!userOn) teardown();
+        void sync();
+      });
+
+      document.addEventListener('visibilitychange', () => void sync());
+      wide.addEventListener('change', () => void sync());
+      reduce.addEventListener('change', () => void sync());
+
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            inView = entries.some((entry) => entry.isIntersecting);
+            void sync();
+          },
+          { rootMargin: '120px' },
+        );
+        observer.observe(banner);
+      }
+
+      syncLabel();
+      void sync();
+    }
+  }
+</script>
