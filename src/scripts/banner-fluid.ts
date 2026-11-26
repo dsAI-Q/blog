@@ -40,10 +40,10 @@ const DYE_MAX_DIMENSION = 1024;
 const PRESSURE_ITERATIONS = 18;
 const CURL = 20;
 const VELOCITY_DISSIPATION = 0.9;
-const DENSITY_DISSIPATION = 0.05;
-const SPLAT_RADIUS = 0.012;
+const DENSITY_DISSIPATION = 0.035;
+const SPLAT_RADIUS = 0.02;
 const SPLAT_FORCE = 1800;
-const DYE_TINT: [number, number, number] = [0.78, 0.84, 0.95];
+function hsv(h, s, v) { const i = Math.floor(h / 60) % 6; const f = h / 60 - Math.floor(h / 60); const p = v * (1 - s); const q = v * (1 - f * s); const t = v * (1 - (1 - f) * s); return [ [v,t,p],[q,v,p],[p,v,t],[p,q,v],[t,p,v],[v,p,q] ][i]; }
 
 const VERT = `#version 300 es
 precision highp float;
@@ -386,7 +386,7 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
   let seeded = false;
 
   function allocate() {
-    const rect = target.getBoundingClientRect();
+    const rect = { width: window.innerWidth, height: window.innerHeight };
     const aspect = rect.width > 0 && rect.height > 0 ? rect.width / rect.height : 16 / 9;
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
@@ -426,9 +426,12 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     dye.swap();
   }
 
+  let hue = Math.random() * 360;
   function randomDye(intensity = 0.32): [number, number, number] {
-    const b = intensity * (0.75 + Math.random() * 0.5);
-    return [DYE_TINT[0] * b, DYE_TINT[1] * b, DYE_TINT[2] * b];
+    hue = (hue + 7 + Math.random() * 10) % 360;
+    const [r, g, b] = hsv(hue, 0.55, 1);
+    const k = intensity * (0.8 + Math.random() * 0.4);
+    return [r * k, g * k, b * k];
   }
 
   function step(dt: number) {
@@ -513,7 +516,7 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     for (let i = 0; i < 4; i++) {
       const x = 0.2 + Math.random() * 0.6;
       const y = 0.3 + Math.random() * 0.5;
-      splat(x, y, (Math.random() - 0.5) * 70, (Math.random() - 0.5) * 70, randomDye(2.6));
+      splat(x, y, (Math.random() - 0.5) * 70, (Math.random() - 0.5) * 70, randomDye(1.6));
     }
   }
 
@@ -545,10 +548,10 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
   let hasLast = false;
 
   const onPointerMove = (event: PointerEvent) => {
-    const rect = target.getBoundingClientRect();
+    const rect = { width: window.innerWidth, height: window.innerHeight };
     if (!rect.width || !rect.height) return;
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = 1 - (event.clientY - rect.top) / rect.height;
+    const x = event.clientX / rect.width;
+    const y = 1 - event.clientY / rect.height;
 
     if (!hasLast) {
       lastX = x;
@@ -563,7 +566,7 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     lastY = y;
 
     if (Math.abs(dx) + Math.abs(dy) > 0.4) {
-      pending.push({ x, y, dx, dy, color: randomDye(3.0) });
+      pending.push({ x, y, dx, dy, color: randomDye(2.2) });
     }
   };
 
@@ -571,17 +574,16 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     hasLast = false;
   };
 
-  target.addEventListener('pointermove', onPointerMove, { passive: true });
-  target.addEventListener('pointerleave', onPointerLeave, { passive: true });
+  window.addEventListener('pointermove', onPointerMove, { passive: true });
+  window.addEventListener('pointerleave', onPointerLeave, { passive: true });
 
-  const resizeObserver = new ResizeObserver(() => {
-    const rect = target.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+  const onResize = () => {
+    if (!window.innerWidth || !window.innerHeight) return;
     allocate();
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-  });
-  resizeObserver.observe(target);
+    gl!.clearColor(0, 0, 0, 0);
+    gl!.clear(gl!.COLOR_BUFFER_BIT);
+  };
+  window.addEventListener('resize', onResize);
 
   const handle: BannerFluidHandle = {
     pause() {
@@ -597,9 +599,9 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     destroy() {
       running = false;
       cancelAnimationFrame(raf);
-      target.removeEventListener('pointermove', onPointerMove);
-      target.removeEventListener('pointerleave', onPointerLeave);
-      resizeObserver.disconnect();
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerleave', onPointerLeave);
+      window.removeEventListener('resize', onResize);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     },
   };

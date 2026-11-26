@@ -17,7 +17,8 @@ const imagePrompts = PROMPTS.filter((prompt) => prompt.category === '图像').le
 const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').length;
 ---
 
-<Base wide>
+<Base wide dark>
+  <link slot="head" rel="stylesheet" href="/dark-home.css" />
   <figure class="banner">
     <img
       src={SITE.banner.src}
@@ -27,13 +28,6 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
       fetchpriority="high"
       decoding="async"
     />
-
-    <button
-      type="button"
-      class="banner-fluid-toggle"
-      data-fluid-toggle
-      aria-pressed="true"
-      hidden>关闭动效</button>
 
     <div class="banner-caption">
       <p class="banner-note">
@@ -136,16 +130,19 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
       }
     </aside>
   </div>
+
+  <button type="button" class="page-fluid-toggle" data-fluid-toggle aria-pressed="true" hidden>
+    关闭背景动效
+  </button>
 </Base>
 
 <script>
   {
-    // 横幅的鼠标烟雾：桌面才开、可关、后台/离屏暂停、不支持就静默降级
+    // 首页整页背景流体：桌面才开、可关、后台暂停、不支持就静默降级
     const KEY = 'dsh.fluid';
-    const banner = document.querySelector<HTMLElement>('.banner');
     const toggle = document.querySelector<HTMLButtonElement>('[data-fluid-toggle]');
 
-    if (banner && toggle) {
+    if (toggle) {
       const wide = window.matchMedia('(min-width: 62rem)');
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
       const webgl2 = (() => {
@@ -156,24 +153,22 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
         }
       })();
 
-      // 试验功能：默认关闭，想看的自己点开，状态记在本机
       let userOn = true;
       try {
         userOn = localStorage.getItem(KEY) !== 'off';
       } catch {
-        userOn = false;
+        userOn = true;
       }
 
       let handle: { pause(): void; resume(): void; destroy(): void } | null = null;
       let canvas: HTMLCanvasElement | null = null;
       let loading = false;
-      let inView = true;
 
       const supported = () => webgl2 && wide.matches;
-      const shouldRun = () => userOn && supported() && !reduce.matches && inView && !document.hidden;
+      const shouldRun = () => userOn && supported() && !reduce.matches && !document.hidden;
 
       const syncLabel = () => {
-        toggle.textContent = userOn ? '关闭动效' : '开启动效';
+        toggle.textContent = userOn ? '关闭背景动效' : '开启背景动效';
         toggle.setAttribute('aria-pressed', String(userOn));
         toggle.hidden = !supported();
       };
@@ -192,10 +187,10 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
           const module = await import('../scripts/banner-fluid');
           if (!userOn) return;
           canvas = document.createElement('canvas');
-          canvas.className = 'banner-fluid-canvas';
+          canvas.className = 'page-fluid-canvas';
           canvas.setAttribute('aria-hidden', 'true');
-          banner.prepend(canvas);
-          handle = module.createBannerFluid(canvas, banner);
+          document.body.append(canvas);
+          handle = module.createBannerFluid(canvas, document.body);
         } catch {
           teardown();
         } finally {
@@ -231,17 +226,6 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
       document.addEventListener('visibilitychange', () => void sync());
       wide.addEventListener('change', () => void sync());
       reduce.addEventListener('change', () => void sync());
-
-      if ('IntersectionObserver' in window) {
-        const observer = new IntersectionObserver(
-          (entries) => {
-            inView = entries.some((entry) => entry.isIntersecting);
-            void sync();
-          },
-          { rootMargin: '120px' },
-        );
-        observer.observe(banner);
-      }
 
       syncLabel();
       void sync();
