@@ -32,8 +32,8 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
       type="button"
       class="banner-fluid-toggle"
       data-fluid-toggle
-      aria-pressed="false"
-      hidden>开启动效</button>
+      aria-pressed="true"
+      hidden>关闭动效</button>
 
     <div class="banner-caption">
       <p class="banner-note">
@@ -157,9 +157,9 @@ const videoPrompts = PROMPTS.filter((prompt) => prompt.category === '视频').le
       })();
 
       // 试验功能：默认关闭，想看的自己点开，状态记在本机
-      let userOn = false;
+      let userOn = true;
       try {
-        userOn = localStorage.getItem(KEY) === 'on';
+        userOn = localStorage.getItem(KEY) !== 'off';
       } catch {
         userOn = false;
       }

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 首页横幅的「鼠标跟随烟雾」：WebGL2 上的稳定流体（Stable Fluids）精简实现。
  * 思路和 Pavel Dobryakov 的 MIT 开源 WebGL Fluid Simulation 一致：
  * 速度场 + 染料场双缓冲，每帧 advect → curl/vorticity → divergence → pressure → gradient，
@@ -35,14 +35,14 @@ export interface BannerFluidHandle {
 }
 
 const SIM_RESOLUTION = 160;
-const DYE_RESOLUTION = 420;
+const DYE_RESOLUTION = 720;
 const DYE_MAX_DIMENSION = 1024;
 const PRESSURE_ITERATIONS = 18;
-const CURL = 18;
-const VELOCITY_DISSIPATION = 0.18;
-const DENSITY_DISSIPATION = 0.16;
-const SPLAT_RADIUS = 0.004;
-const SPLAT_FORCE = 5200;
+const CURL = 20;
+const VELOCITY_DISSIPATION = 0.9;
+const DENSITY_DISSIPATION = 0.05;
+const SPLAT_RADIUS = 0.012;
+const SPLAT_FORCE = 1800;
 const DYE_TINT: [number, number, number] = [0.78, 0.84, 0.95];
 
 const VERT = `#version 300 es
@@ -222,25 +222,20 @@ const DISPLAY = `#version 300 es
 precision highp float;
 precision highp sampler2D;
 in vec2 vUv;
-in vec2 vL;
-in vec2 vR;
-in vec2 vT;
-in vec2 vB;
 out vec4 fragColor;
 uniform sampler2D uTexture;
+uniform vec2 texelSize;
 void main () {
-  vec3 c = texture(uTexture, vUv).rgb;
-  vec3 lc = texture(uTexture, vL).rgb;
-  vec3 rc = texture(uTexture, vR).rgb;
-  vec3 tc = texture(uTexture, vT).rgb;
-  vec3 bc = texture(uTexture, vB).rgb;
-  float dx = length(rc) - length(lc);
-  float dy = length(tc) - length(bc);
-  vec3 n = normalize(vec3(dx * 8.0, dy * 8.0, 0.32));
-  float shade = clamp(dot(n, normalize(vec3(-0.35, 0.45, 1.0))) * 0.6 + 0.62, 0.3, 1.2);
-  vec3 color = c * shade;
-  float alpha = clamp(max(color.r, max(color.g, color.b)) * 3.0, 0.0, 0.9);
-  fragColor = vec4(color * alpha, alpha);
+  // 4 点均值代替硬件双线性（这台机器上 RGBA16F 线性过滤不生效）
+  vec2 ts = texelSize * 0.5;
+  vec3 c =
+    texture(uTexture, vUv + vec2(-ts.x, -ts.y)).rgb +
+    texture(uTexture, vUv + vec2(ts.x, -ts.y)).rgb +
+    texture(uTexture, vUv + vec2(-ts.x, ts.y)).rgb +
+    texture(uTexture, vUv + vec2(ts.x, ts.y)).rgb;
+  c *= 0.25;
+  float alpha = clamp(max(c.r, max(c.g, c.b)) * 1.1, 0.0, 0.8);
+  fragColor = vec4(c * alpha, alpha);
 }`;
 
 function compileShader(gl: GL, type: number, source: string): WebGLShader {
@@ -334,8 +329,8 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     const texture = gl!.createTexture();
     if (!texture) throw new Error('createTexture failed');
     gl!.bindTexture(gl!.TEXTURE_2D, texture);
-    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MIN_FILTER, gl!.LINEAR);
-    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MAG_FILTER, gl!.LINEAR);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MIN_FILTER, gl!.NEAREST);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MAG_FILTER, gl!.NEAREST);
     gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_S, gl!.CLAMP_TO_EDGE);
     gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_T, gl!.CLAMP_TO_EDGE);
     gl!.texImage2D(gl!.TEXTURE_2D, 0, gl!.RGBA16F, width, height, 0, gl!.RGBA, gl!.HALF_FLOAT, null);
@@ -518,25 +513,30 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     for (let i = 0; i < 4; i++) {
       const x = 0.2 + Math.random() * 0.6;
       const y = 0.3 + Math.random() * 0.5;
-      splat(x, y, (Math.random() - 0.5) * 240, (Math.random() - 0.5) * 240, randomDye(0.9));
+      splat(x, y, (Math.random() - 0.5) * 70, (Math.random() - 0.5) * 70, randomDye(2.6));
     }
   }
 
   function frame(now: number) {
     if (!running) return;
-    seed();
-    const dt = Math.min(Math.max((now - lastTime) / 1000, 0.0001), 1 / 45);
-    lastTime = now;
+    try {
+      seed();
+      const dt = Math.min(Math.max((now - lastTime) / 1000, 0.0001), 1 / 45);
+      lastTime = now;
 
-    if (pending.length) {
-      const splats = pending.slice(0, 3);
-      pending = pending.slice(splats.length);
-      for (const s of splats) splat(s.x, s.y, s.dx, s.dy, s.color);
+      if (pending.length) {
+        const splats = pending.slice(0, 3);
+        pending = pending.slice(splats.length);
+        for (const s of splats) splat(s.x, s.y, s.dx, s.dy, s.color);
+      }
+
+      step(dt);
+      render();
+      raf = requestAnimationFrame(frame);
+    } catch {
+      // 出错就安静停下，不影响横幅本身
+      running = false;
     }
-
-    step(dt);
-    render();
-    raf = requestAnimationFrame(frame);
   }
 
   /* ---------------- 指针 ---------------- */
@@ -563,7 +563,7 @@ export function createBannerFluid(canvas: HTMLCanvasElement, target: HTMLElement
     lastY = y;
 
     if (Math.abs(dx) + Math.abs(dy) > 0.4) {
-      pending.push({ x, y, dx, dy, color: randomDye(1.05) });
+      pending.push({ x, y, dx, dy, color: randomDye(3.0) });
     }
   };
 
