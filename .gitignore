@@ -15,3 +15,5 @@ Thumbs.db
 
 # 本地扫描缓存
 .cache/
+
+.npm-cache/
